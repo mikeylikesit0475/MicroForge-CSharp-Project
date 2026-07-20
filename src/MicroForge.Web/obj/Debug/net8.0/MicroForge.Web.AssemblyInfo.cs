@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MicroForge.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+996283172cd02111ae99aefde45bf12403135cce")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b95998ce6034b0fcef1b29de58676d7c9319c6b9")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicroForge.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MicroForge.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

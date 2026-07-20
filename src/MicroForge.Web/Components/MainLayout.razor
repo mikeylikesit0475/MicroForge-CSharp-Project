@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject AuthStateProvider AuthState
 @inject NavigationManager Navigation
 
@@ -10,7 +11,7 @@
                 <span class="logo">MicroForge</span>
             </div>
             <ul class="nav-menu">
-                <li><NavLink href="/" match="NavLinkMatch.All">Dashboard</NavLink></li>
+                <li><NavLink href="/" match="@NavLinkMatch.All">Dashboard</NavLink></li>
                 <li><NavLink href="/production-lines">Production Lines</NavLink></li>
                 <li><NavLink href="/production-runs">Production Runs</NavLink></li>
                 <li><NavLink href="/events">Events &amp; Alerts</NavLink></li>

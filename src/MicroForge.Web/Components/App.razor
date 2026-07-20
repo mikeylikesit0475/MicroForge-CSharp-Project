@@ -1,4 +1,5 @@
 @inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Web
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,11 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MicroForge — Manufacturing Intelligence</title>
     <base href="/" />
+    <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="_framework/scoped.styles.css" />
 </head>
 <body>
-    <Routes />
+    <Routes @rendermode="RenderMode.InteractiveServer" />
 
     <script src="_framework/blazor.web.js"></script>
 </body>
