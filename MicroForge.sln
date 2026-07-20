@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroForge.IntegrationTests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroForge.AgentTests", "tests\MicroForge.AgentTests\MicroForge.AgentTests.csproj", "{3651C3DB-BB5B-4FC4-AA05-8BB15FC4A0CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroForge.PerformanceTests", "tests\MicroForge.PerformanceTests\MicroForge.PerformanceTests.csproj", "{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{3651C3DB-BB5B-4FC4-AA05-8BB15FC4A0CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3651C3DB-BB5B-4FC4-AA05-8BB15FC4A0CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3651C3DB-BB5B-4FC4-AA05-8BB15FC4A0CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7326C6BA-7EE1-479E-9FCA-8A188AAEF439} = {FDE99FAC-8C37-4EFC-9EF4-07FD6C31BF97}
@@ -67,5 +73,6 @@ Global
 		{B4AC488F-6ED8-4BA7-B633-CAB4C24A8CFB} = {B2EC718A-714E-428D-B36A-37A942238EF5}
 		{58E3BB8E-1A6C-4394-BBCC-30B590B29577} = {B2EC718A-714E-428D-B36A-37A942238EF5}
 		{3651C3DB-BB5B-4FC4-AA05-8BB15FC4A0CE} = {B2EC718A-714E-428D-B36A-37A942238EF5}
+		{F10B1B5B-0164-4548-8DA2-13EFE4CF4D2F} = {B2EC718A-714E-428D-B36A-37A942238EF5}
 	EndGlobalSection
 EndGlobal

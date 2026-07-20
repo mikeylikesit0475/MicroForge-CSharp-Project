@@ -140,11 +140,11 @@ This register tracks **technical debt** — intentional shortcuts, known limitat
 | Sprint | Open Items | Critical | High | Medium | Low | Resolved This Sprint |
 |---|---|---|---|---|---|---|
 | Sprint 1 | 1 | 0 | 0 | 1 | 0 | 0 |
-| Sprint 2 | — | — | — | — | — | — |
-| Sprint 3 | — | — | — | — | — | — |
-| Sprint 4 | — | — | — | — | — | — |
-| Sprint 5 | — | — | — | — | — | — |
-| Sprint 6 | — | — | — | — | — | — |
+| Sprint 2 | 1 | 0 | 0 | 1 | 0 | 0 |
+| Sprint 3 | 1 | 0 | 0 | 1 | 0 | 0 |
+| Sprint 4 | 2 | 0 | 1 | 1 | 0 | 0 |
+| Sprint 5 | 2 | 0 | 1 | 1 | 0 | 0 |
+| Sprint 6 | 2 | 0 | 1 | 1 | 0 | 0 |
 
 ---
 
