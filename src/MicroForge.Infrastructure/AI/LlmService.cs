@@ -117,9 +117,19 @@ public class LlmService : ILlmClient
 
         return new LlmResponse
         {
-            Content = "I'm the MicroForge AI Agent. I can help you query production data, sensor readings, " +
-                      "defect records, and search manufacturing documents. " +
-                      "Try asking me about production line status, recent defects, or sensor anomalies.",
+            Content = "I'm the MicroForge AI Agent. I can help you with:\n" +
+                      "- Production line status and dashboard summaries\n" +
+                      "- Production runs, yields, and trends\n" +
+                      "- Defect records and quality issues\n" +
+                      "- Sensor readings and anomaly detection\n" +
+                      "- Alerts (query, create, acknowledge)\n" +
+                      "- Document search (SOPs, specs, reports)\n" +
+                      "- Statistical analysis\n\n" +
+                      "Try asking something like:\n" +
+                      "- \"What's happening on the floor?\"\n" +
+                      "- \"Show me recent defects\"\n" +
+                      "- \"Any sensor anomalies?\"\n" +
+                      "- \"What's the yield trend?\"",
             ToolCall = null,
             FinishReason = true,
             TokensUsed = 50
@@ -134,40 +144,106 @@ public class LlmService : ILlmClient
         string? candidate = null;
         JsonObject? args = null;
 
-        if (lower.Contains("defect"))
+        // Dashboard / overview / summary queries
+        if (lower.Contains("dashboard") || lower.Contains("overview") || lower.Contains("summary") ||
+            lower.Contains("kpi") || lower.Contains("how are things") || lower.Contains("what's happening") ||
+            lower.Contains("whats happening") || lower.Contains("how's it going") || lower.Contains("hows it going"))
+        {
+            candidate = "get_dashboard_summary";
+            args = new JsonObject();
+        }
+        // Alert-related queries (check before generic "status" to be more specific)
+        else if (lower.Contains("alert") || lower.Contains("alarm") || lower.Contains("warning") ||
+                 lower.Contains("acknowledg") || lower.Contains("unacknowledg"))
+        {
+            if (lower.Contains("acknowledg"))
+            {
+                candidate = "acknowledge_alert";
+                args = new JsonObject { ["alertId"] = 1 };
+            }
+            else
+            {
+                candidate = "query_alerts";
+                args = new JsonObject { ["limit"] = 20 };
+            }
+        }
+        // Anomaly detection
+        else if (lower.Contains("anomal") || lower.Contains("detect") || lower.Contains("outlier"))
+        {
+            candidate = "detect_anomalies";
+            args = new JsonObject();
+        }
+        // Defect queries
+        else if (lower.Contains("defect") || lower.Contains("quality issue") || lower.Contains("reject"))
         {
             candidate = "query_production_defects";
             args = new JsonObject { ["limit"] = 20 };
         }
-        else if (lower.Contains("sensor") || lower.Contains("reading") || lower.Contains("anomal"))
+        // Sensor readings
+        else if (lower.Contains("sensor") || lower.Contains("reading") || lower.Contains("temperature") ||
+                 lower.Contains("pressure") || lower.Contains("humidity") || lower.Contains("vibration"))
         {
             candidate = "query_sensor_readings";
             args = new JsonObject { ["limit"] = 20 };
         }
-        else if (lower.Contains("status") || lower.Contains("line"))
+        // Production line status
+        else if (lower.Contains("status") || lower.Contains("line") || lower.Contains("floor") ||
+                 lower.Contains("production line") || lower.Contains("lines"))
         {
             candidate = "get_production_line_status";
             args = new JsonObject();
         }
-        else if (lower.Contains("yield") || lower.Contains("trend"))
+        // Yield trends
+        else if (lower.Contains("yield") || lower.Contains("trend") || lower.Contains("chart"))
         {
             candidate = "get_yield_trend";
             args = new JsonObject();
         }
-        else if (lower.Contains("document") || lower.Contains("search") || lower.Contains("sop") || lower.Contains("spec"))
+        // Document search
+        else if (lower.Contains("document") || lower.Contains("search") || lower.Contains("sop") ||
+                 lower.Contains("spec") || lower.Contains("manual") || lower.Contains("procedure") ||
+                 lower.Contains("report") || lower.Contains("instruction"))
         {
             candidate = "search_documents";
             args = new JsonObject { ["query"] = message, ["topK"] = 5 };
         }
-        else if (lower.Contains("run") || lower.Contains("batch"))
+        // Production run summary
+        else if (lower.Contains("run") || lower.Contains("batch") || lower.Contains("production run"))
         {
             candidate = "get_production_run_summary";
             args = new JsonObject();
         }
-        else if (lower.Contains("statistic") || lower.Contains("average") || lower.Contains("mean"))
+        // Statistics
+        else if (lower.Contains("statistic") || lower.Contains("average") || lower.Contains("mean") ||
+                 lower.Contains("median") || lower.Contains("std") || lower.Contains("standard deviation") ||
+                 lower.Contains("min") || lower.Contains("max"))
         {
             candidate = "calculate_statistics";
             args = new JsonObject();
+        }
+        // Update production run status
+        else if (lower.Contains("update") && (lower.Contains("status") || lower.Contains("run")))
+        {
+            candidate = "update_production_run_status";
+            args = new JsonObject();
+        }
+        // Create alert
+        else if (lower.Contains("create") && lower.Contains("alert"))
+        {
+            candidate = "create_alert";
+            args = new JsonObject();
+        }
+        // Create defect record
+        else if (lower.Contains("create") && lower.Contains("defect"))
+        {
+            candidate = "create_defect_record";
+            args = new JsonObject();
+        }
+        // Query production runs
+        else if (lower.Contains("production run") || lower.Contains("list run") || lower.Contains("show run"))
+        {
+            candidate = "query_production_runs";
+            args = new JsonObject { ["limit"] = 20 };
         }
 
         if (candidate != null && toolNames.Contains(candidate))
