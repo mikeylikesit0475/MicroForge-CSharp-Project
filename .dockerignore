@@ -1,0 +1,40 @@
+# Build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs and data
+logs/
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+README.md
+START_HERE.md
+architecture/
+grading/
+scrum/
+csharp-reference-tutorial/

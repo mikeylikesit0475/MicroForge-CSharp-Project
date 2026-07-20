@@ -1,0 +1,68 @@
+2026-07-18 10:43:37.005 -06:00 [INF] Starting MicroForge application
+2026-07-18 10:43:37.182 -06:00 [FTL] Application terminated unexpectedly
+System.AggregateException: Some services are not able to be constructed (Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.) (Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.ICacheService Lifetime: Singleton ImplementationType: MicroForge.Infrastructure.Cache.CacheService': Unable to resolve service for type 'Microsoft.Extensions.Caching.Memory.IMemoryCache' while attempting to activate 'MicroForge.Infrastructure.Cache.CacheService'.)
+ ---> System.InvalidOperationException: Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+ ---> System.InvalidOperationException: Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.GetCallSite(ServiceDescriptor serviceDescriptor, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   at Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(IServiceCollection services, ServiceProviderOptions options)
+   at Microsoft.Extensions.Hosting.HostApplicationBuilder.Build()
+   at Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build()
+   at Program.<Main>$(String[] args) in /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/Program.cs:line 145
+ ---> (Inner Exception #1) System.InvalidOperationException: Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.ICacheService Lifetime: Singleton ImplementationType: MicroForge.Infrastructure.Cache.CacheService': Unable to resolve service for type 'Microsoft.Extensions.Caching.Memory.IMemoryCache' while attempting to activate 'MicroForge.Infrastructure.Cache.CacheService'.
+ ---> System.InvalidOperationException: Unable to resolve service for type 'Microsoft.Extensions.Caching.Memory.IMemoryCache' while attempting to activate 'MicroForge.Infrastructure.Cache.CacheService'.
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.GetCallSite(ServiceDescriptor serviceDescriptor, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)<---
+
+2026-07-18 10:44:03.158 -06:00 [INF] Starting MicroForge application
+2026-07-18 10:44:03.336 -06:00 [FTL] Application terminated unexpectedly
+System.AggregateException: Some services are not able to be constructed (Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.)
+ ---> System.InvalidOperationException: Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+ ---> System.InvalidOperationException: Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.GetCallSite(ServiceDescriptor serviceDescriptor, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   at Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(IServiceCollection services, ServiceProviderOptions options)
+   at Microsoft.Extensions.Hosting.HostApplicationBuilder.Build()
+   at Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build()
+   at Program.<Main>$(String[] args) in /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/Program.cs:line 145
+2026-07-18 10:44:30.594 -06:00 [INF] Starting MicroForge application
+2026-07-18 10:44:30.783 -06:00 [FTL] Application terminated unexpectedly
+System.AggregateException: Some services are not able to be constructed (Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.)
+ ---> System.InvalidOperationException: Error while validating the service descriptor 'ServiceType: MicroForge.Domain.Interfaces.IAuthService Lifetime: Scoped ImplementationType: MicroForge.Infrastructure.Auth.AuthService': Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+ ---> System.InvalidOperationException: Unable to resolve service for type 'MicroForge.Domain.Configuration.JwtSettings' while attempting to activate 'MicroForge.Infrastructure.Auth.AuthService'.
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateArgumentCallSites(ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain, ParameterInfo[] parameters, Boolean throwIfCallSiteNotFound)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.CreateConstructorCallSite(ResultCache lifetime, ServiceIdentifier serviceIdentifier, Type implementationType, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.TryCreateExact(ServiceDescriptor descriptor, ServiceIdentifier serviceIdentifier, CallSiteChain callSiteChain, Int32 slot)
+   at Microsoft.Extensions.DependencyInjection.ServiceLookup.CallSiteFactory.GetCallSite(ServiceDescriptor serviceDescriptor, CallSiteChain callSiteChain)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider.ValidateService(ServiceDescriptor descriptor)
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   --- End of inner exception stack trace ---
+   at Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(ICollection`1 serviceDescriptors, ServiceProviderOptions options)
+   at Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(IServiceCollection services, ServiceProviderOptions options)
+   at Microsoft.Extensions.Hosting.HostApplicationBuilder.Build()
+   at Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build()
+   at Program.<Main>$(String[] args) in /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/Program.cs:line 145

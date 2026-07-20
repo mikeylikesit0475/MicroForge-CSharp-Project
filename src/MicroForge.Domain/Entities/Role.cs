@@ -1,0 +1,14 @@
+namespace MicroForge.Domain.Entities;
+
+/// <summary>
+/// Represents an RBAC role (Admin, Engineer, Operator, Viewer).
+/// </summary>
+public class Role
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Permissions { get; set; } = string.Empty;
+
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+}

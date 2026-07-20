@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "W00MVtF0TP/5eg2mccwNO77i1VCMkTOuzVhbIuYde3I=",
+  "Source": "MicroForge.Web",
+  "BasePath": "_content/MicroForge.Web",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "MicroForge.Web/wwwroot",
+      "Source": "MicroForge.Web",
+      "ContentRoot": "/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/wwwroot/",
+      "BasePath": "_content/MicroForge.Web",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}

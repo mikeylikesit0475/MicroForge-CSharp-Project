@@ -1,0 +1,11 @@
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/bin/Debug/net8.0/MicroForge.Domain.deps.json
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/bin/Debug/net8.0/MicroForge.Domain.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/bin/Debug/net8.0/MicroForge.Domain.pdb
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.AssemblyInfoInputs.cache
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.AssemblyInfo.cs
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.csproj.CoreCompileInputs.cache
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/refint/MicroForge.Domain.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/MicroForge.Domain.pdb
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Domain/obj/Debug/net8.0/ref/MicroForge.Domain.dll

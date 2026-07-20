@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  microforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: microforge-app
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/microforge.db
+      - Jwt__SecretKey=${JWT_SECRET_KEY:-MicroForge-Development-Secret-Key-32-Chars!!}
+      - Jwt__Issuer=MicroForge
+      - Jwt__Audience=MicroForge-Client
+      - Jwt__AccessTokenExpiryMinutes=60
+      - Logging__LogLevel__Default=Information
+      - Agent__LlmProvider=mock
+      - Agent__LlmModel=mock-model
+      - Sensor__AutoStart=false
+    volumes:
+      - microforge-data:/app/data
+      - microforge-logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  microforge-data:
+  microforge-logs:
