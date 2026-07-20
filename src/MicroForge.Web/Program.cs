@@ -45,7 +45,7 @@ builder.Services.AddRazorComponents()
 // HttpClient for Blazor Server API calls — uses the same server's base address
 builder.Services.AddHttpClient<AuthStateProvider>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["BaseUrl"] ?? "http://localhost:5000");
+    client.BaseAddress = new Uri(builder.Configuration["BaseUrl"] ?? "http://localhost:5188");
 });
 
 builder.Services.AddScoped<AuthStateProvider>();

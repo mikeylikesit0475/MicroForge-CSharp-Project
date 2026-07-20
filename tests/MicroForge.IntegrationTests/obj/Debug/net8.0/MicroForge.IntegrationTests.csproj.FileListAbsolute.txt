@@ -496,3 +496,6 @@
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/Microsoft.Extensions.Diagnostics.HealthChecks.dll
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/FluentValidation.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/FluentValidation.AspNetCore.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.IntegrationTests/bin/Debug/net8.0/FluentValidation.DependencyInjectionExtensions.dll

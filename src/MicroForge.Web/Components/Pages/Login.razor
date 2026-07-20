@@ -12,7 +12,7 @@
         <div class="login-error">@_error</div>
     }
 
-    <EditForm Model="@_model" OnValidSubmit="@DoLogin" class="login-form">
+    <EditForm Model="@_model" OnValidSubmit="@DoLogin" FormName="login" class="login-form">
         <div class="form-group">
             <label for="username">Username</label>
             <InputText id="username" @bind-Value="_model.Username" placeholder="Enter username" />
@@ -30,7 +30,7 @@
     </EditForm>
 
     <div class="mt-16 text-sm text-muted">
-        Demo accounts: admin / engineer / operator (password: Password123!)
+        Demo accounts: admin / engineer01 / operator01 (password: username + "123")
     </div>
 </div>
 

@@ -33,6 +33,14 @@ public class AuthStateProvider : AuthenticationStateProvider
         _http = http;
         _nav = nav;
         _logger = logger;
+
+        // Ensure the HttpClient base address matches the actual server URL.
+        // The base address configured in Program.cs may be a stale default
+        // (e.g. http://localhost:5000) that doesn't match the real port.
+        if (_http.BaseAddress == null || _http.BaseAddress.ToString().Contains("localhost:5000"))
+        {
+            _http.BaseAddress = new Uri(_nav.BaseUri);
+        }
     }
 
     /// <summary>

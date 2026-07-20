@@ -409,3 +409,6 @@
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/obj/Debug/net8.0/MicroForge.PerformanceTests.pdb
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/obj/Debug/net8.0/MicroForge.PerformanceTests.genruntimeconfig.cache
 /Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/obj/Debug/net8.0/ref/MicroForge.PerformanceTests.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/bin/Debug/net8.0/FluentValidation.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/bin/Debug/net8.0/FluentValidation.AspNetCore.dll
+/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/tests/MicroForge.PerformanceTests/bin/Debug/net8.0/FluentValidation.DependencyInjectionExtensions.dll
