@@ -1,0 +1,190 @@
+@page "/production-runs"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Production Runs — MicroForge</PageTitle>
+
+<h1 class="page-title">Production Runs</h1>
+
+@if (AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator)
+{
+    <div class="mb-16">
+        <button class="btn" @onclick="ToggleCreateForm">+ New Production Run</button>
+    </div>
+
+    @if (_showCreate)
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Create Production Run</span>
+            </div>
+            <EditForm Model="@_newRun" OnValidSubmit="@CreateRun">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Production Line</label>
+                        <select @bind="_newRun.ProductionLineId">
+                            <option value="0">-- Select Line --</option>
+                            @foreach (var line in _lines)
+                            {
+                                <option value="@line.Id">@line.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Batch Number</label>
+                        <InputText @bind-Value="_newRun.BatchNumber" placeholder="e.g. BATCH-2026-001" />
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Target Yield</label>
+                        <InputNumber @bind-Value="_newRun.TargetYield" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <InputTextArea @bind-Value="_newRun.Notes" />
+                </div>
+                @if (_createError != null)
+                {
+                    <div class="error-text mb-16">@_createError</div>
+                }
+                <button type="submit" class="btn">Create</button>
+                <button type="button" class="btn btn-secondary" @onclick="ToggleCreateForm">Cancel</button>
+            </EditForm>
+        </div>
+    }
+}
+
+@if (_loading)
+{
+    <div class="loading">Loading production runs...</div>
+}
+else if (_runs.Count > 0)
+{
+    <table class="card">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Line</th>
+                <th>Batch</th>
+                <th>Start Time</th>
+                <th>Status</th>
+                <th>Target Yield</th>
+                <th>Actual Yield</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var run in _runs)
+            {
+                <tr>
+                    <td>@run.Id</td>
+                    <td>Line @run.ProductionLineId</td>
+                    <td>@run.BatchNumber</td>
+                    <td class="text-sm text-muted">@run.StartTime.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>
+                        <span class="badge @GetStatusBadge(run.Status)">@run.Status</span>
+                    </td>
+                    <td>@run.TargetYield.ToString("F1")</td>
+                    <td>@(run.ActualYield > 0 ? run.ActualYield.ToString("F1") : "—")</td>
+                    <td>
+                        @if ((AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator) && run.Status != "Completed" && run.Status != "Cancelled")
+                        {
+                            <button class="btn btn-secondary text-sm" @onclick="() => CompleteRun(run.Id)">Complete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="empty-state">No production runs found.</div>
+}
+
+@code {
+    private List<ProductionRunDto> _runs = new();
+    private List<ProductionLineDto> _lines = new();
+    private bool _loading = true;
+    private bool _showCreate;
+    private CreateProductionRunRequest _newRun = new();
+    private string? _createError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        try
+        {
+            var client = AuthState.GetClient();
+            _runs = await client.GetFromJsonAsync<List<ProductionRunDto>>("/api/production-runs") ?? new();
+            _lines = await client.GetFromJsonAsync<List<ProductionLineDto>>("/api/production-lines") ?? new();
+        }
+        catch
+        {
+            _runs = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ToggleCreateForm()
+    {
+        _showCreate = !_showCreate;
+        _createError = null;
+    }
+
+    private async Task CreateRun()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsJsonAsync("/api/production-runs", _newRun);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreate = false;
+                _newRun = new CreateProductionRunRequest();
+                _runs = await client.GetFromJsonAsync<List<ProductionRunDto>>("/api/production-runs") ?? new();
+            }
+            else
+            {
+                _createError = "Failed to create production run.";
+            }
+        }
+        catch
+        {
+            _createError = "An error occurred while creating the production run.";
+        }
+    }
+
+    private async Task CompleteRun(int runId) => await UpdateStatus(runId, "Completed");
+
+    private async Task UpdateStatus(int runId, string status)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var request = new { Status = status, ActualYield = (decimal?)null };
+            await client.PutAsJsonAsync($"/api/production-runs/{runId}", request);
+            _runs = await client.GetFromJsonAsync<List<ProductionRunDto>>("/api/production-runs") ?? new();
+        }
+        catch { }
+    }
+
+    private string GetStatusBadge(string status) => status switch
+    {
+        "Running" => "badge-success",
+        "Completed" => "badge-info",
+        "Paused" => "badge-warning",
+        "Cancelled" => "badge-danger",
+        _ => "badge-muted"
+    };
+}

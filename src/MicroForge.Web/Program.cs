@@ -1,9 +1,16 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using MicroForge.Application;
 using MicroForge.Domain.Configuration;
 using MicroForge.Infrastructure;
 using MicroForge.Infrastructure.Data;
 using MicroForge.Infrastructure.Telemetry;
+using MicroForge.Web.Components;
 using MicroForge.Web.Hubs;
+using MicroForge.Web.Services;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text;
@@ -26,6 +33,27 @@ builder.Host.UseSerilog();
 // ─── Layer DI ───────────────────────────────────────────────────────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// ─── Blazor Server ──────────────────────────────────────────────────
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents()
+    .AddCircuitOptions(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
+
+// HttpClient for Blazor Server API calls — uses the same server's base address
+builder.Services.AddHttpClient<AuthStateProvider>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["BaseUrl"] ?? "http://localhost:5000");
+});
+
+builder.Services.AddScoped<AuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateProvider>());
+
+// ─── FluentValidation ──────────────────────────────────────────────
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // ─── JWT Authentication ───────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -164,6 +192,17 @@ app.UseSerilogRequestLogging();
 // HTTP metrics — count requests and errors (MF-034)
 app.UseMiddleware<HttpMetricsMiddleware>();
 
+// Security headers (MF-033)
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -175,12 +214,13 @@ app.UseExceptionHandler(appBuilder =>
     appBuilder.Run(async context =>
     {
         context.Response.StatusCode = 500;
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new ProblemDetails
         {
-            title = "Internal Server Error",
-            status = 500,
-            detail = "An unexpected error occurred. Please try again later."
+            Title = "Internal Server Error",
+            Status = 500,
+            Detail = "An unexpected error occurred. Please try again later.",
+            Type = "https://httpstatuses.io/500"
         });
     });
 });
@@ -189,6 +229,11 @@ app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseAntiforgery();
+app.UseStaticFiles();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.MapControllers();
 app.MapHub<ProductionHub>("/hubs/production");

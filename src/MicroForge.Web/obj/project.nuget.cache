@@ -1,10 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "DbwUnspcF3g=",
+  "dgSpecHash": "PPV55h0gZdQ=",
   "success": true,
   "projectFilePath": "/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/MicroForge.Web.csproj",
   "expectedPackageFiles": [
     "/Users/mikeylikesit0475/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
+    "/Users/mikeylikesit0475/.nuget/packages/fluentvalidation/11.5.1/fluentvalidation.11.5.1.nupkg.sha512",
+    "/Users/mikeylikesit0475/.nuget/packages/fluentvalidation.aspnetcore/11.3.0/fluentvalidation.aspnetcore.11.3.0.nupkg.sha512",
+    "/Users/mikeylikesit0475/.nuget/packages/fluentvalidation.dependencyinjectionextensions/11.5.1/fluentvalidation.dependencyinjectionextensions.11.5.1.nupkg.sha512",
     "/Users/mikeylikesit0475/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/Users/mikeylikesit0475/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/8.0.11/microsoft.aspnetcore.authentication.jwtbearer.8.0.11.nupkg.sha512",
     "/Users/mikeylikesit0475/.nuget/packages/microsoft.aspnetcore.http.abstractions/2.2.0/microsoft.aspnetcore.http.abstractions.2.2.0.nupkg.sha512",

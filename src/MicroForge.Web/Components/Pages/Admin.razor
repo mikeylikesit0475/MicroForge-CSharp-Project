@@ -1,0 +1,201 @@
+@page "/admin"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Admin — MicroForge</PageTitle>
+
+@if (!AuthState.IsAdmin)
+{
+    <div class="access-denied">
+        <h2>Access Denied</h2>
+        <p>Administrator role required.</p>
+    </div>
+}
+else
+{
+    <h1 class="page-title">Admin Panel</h1>
+
+    <div class="grid-2 mb-16">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">System Health</span>
+            </div>
+            @if (_health != null)
+            {
+                <div>
+                    <p><strong>Status:</strong> <span class="badge @(_health.Status == "Healthy" ? "badge-success" : "badge-danger")">@_health.Status</span></p>
+                    <p class="mt-16"><strong>Database Connected:</strong> @_health.Database.Connected</p>
+                    <div class="mt-16">
+                        <strong>Metrics:</strong>
+                        <ul>
+                            <li>Total Users: @_health.Metrics.TotalUsers</li>
+                            <li>Production Lines: @_health.Metrics.TotalProductionLines</li>
+                            <li>Open Alerts: @_health.Metrics.OpenAlerts</li>
+                        </ul>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="loading">Loading health...</div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Runtime Metrics</span>
+            </div>
+            @if (_metrics != null)
+            {
+                <div>
+                    <p><strong>Memory (Working Set):</strong> @FormatBytes(_metrics.MemoryWorkingSetBytes)</p>
+                    <p class="mt-16"><strong>Memory (Private):</strong> @FormatBytes(_metrics.MemoryPrivateMemorySizeBytes)</p>
+                    <p class="mt-16"><strong>Threads:</strong> @_metrics.Threads</p>
+                    <p class="mt-16"><strong>Uptime:</strong> @TimeSpan.FromSeconds(_metrics.UptimeSeconds).ToString(@"dd\.hh\:mm\:ss")</p>
+                </div>
+            }
+            else
+            {
+                <div class="loading">Loading metrics...</div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">User Management</span>
+        </div>
+        @if (_loading)
+        {
+            <div class="loading">Loading users...</div>
+        }
+        else if (_users.Count > 0)
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Roles</th>
+                        <th>Active</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in _users)
+                    {
+                        <tr>
+                            <td>@user.Id</td>
+                            <td>@user.Username</td>
+                            <td class="text-sm">@user.Email</td>
+                            <td>@user.FirstName @user.LastName</td>
+                            <td>
+                                @foreach (var role in user.Roles)
+                                {
+                                    <span class="badge badge-info">@role</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.IsActive)
+                                { <span class="badge badge-success">Active</span> }
+                                else
+                                { <span class="badge badge-muted">Inactive</span> }
+                            </td>
+                            <td class="text-sm text-muted">@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">No users found.</div>
+        }
+    </div>
+}
+
+@code {
+    private List<AdminUserDto> _users = new();
+    private HealthDto? _health;
+    private MetricsDto? _metrics;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        if (!AuthState.IsAdmin)
+            return;
+
+        var client = AuthState.GetClient();
+
+        try
+        {
+            _users = await client.GetFromJsonAsync<List<AdminUserDto>>("/api/admin/users") ?? new();
+        }
+        catch { }
+
+        try
+        {
+            _health = await client.GetFromJsonAsync<HealthDto>("/api/admin/system/health");
+        }
+        catch { }
+
+        try
+        {
+            _metrics = await client.GetFromJsonAsync<MetricsDto>("/api/admin/system/metrics");
+        }
+        catch { }
+
+        _loading = false;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
+        return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
+    }
+
+    private class AdminUserDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<string> Roles { get; set; } = new();
+    }
+
+    private class HealthDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public DatabaseInfo Database { get; set; } = new();
+        public HealthMetrics Metrics { get; set; } = new();
+
+        public class DatabaseInfo { public bool Connected { get; set; } }
+        public class HealthMetrics
+        {
+            public int TotalUsers { get; set; }
+            public int TotalProductionLines { get; set; }
+            public int OpenAlerts { get; set; }
+        }
+    }
+
+    private class MetricsDto
+    {
+        public long MemoryWorkingSetBytes { get; set; }
+        public long MemoryPrivateMemorySizeBytes { get; set; }
+        public int Threads { get; set; }
+        public double UptimeSeconds { get; set; }
+    }
+}

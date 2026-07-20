@@ -1,0 +1,60 @@
+@inherits LayoutComponentBase
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<div class="app-shell">
+    @if (AuthState.IsAuthenticated)
+    {
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">MicroForge</span>
+            </div>
+            <ul class="nav-menu">
+                <li><NavLink href="/" match="NavLinkMatch.All">Dashboard</NavLink></li>
+                <li><NavLink href="/production-lines">Production Lines</NavLink></li>
+                <li><NavLink href="/production-runs">Production Runs</NavLink></li>
+                <li><NavLink href="/events">Events &amp; Alerts</NavLink></li>
+                <li><NavLink href="/documents">Documents</NavLink></li>
+                <li><NavLink href="/agent">AI Agent</NavLink></li>
+                @if (AuthState.IsAdmin)
+                {
+                    <li><NavLink href="/admin">Admin</NavLink></li>
+                }
+            </ul>
+        </nav>
+    }
+
+    <div class="main-content">
+        @if (AuthState.IsAuthenticated)
+        {
+            <header class="topbar">
+                <div class="topbar-user">
+                    <span class="user-name">@AuthState.Username</span>
+                    <span class="user-roles">[@string.Join(", ", AuthState.Roles)]</span>
+                    <button class="btn-logout" @onclick="Logout">Logout</button>
+                </div>
+            </header>
+        }
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnChange -= StateHasChanged;
+    }
+
+    private void Logout()
+    {
+        AuthState.Clear();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

@@ -1,0 +1,115 @@
+@page "/events"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Events &amp; Alerts — MicroForge</PageTitle>
+
+<h1 class="page-title">Events &amp; Alerts</h1>
+
+<div class="flex-between mb-16">
+    <div>
+        <label>
+            <input type="checkbox" checked="@_unacknowledgedOnly" @onchange="(e) => { _unacknowledgedOnly = e.Value is true; _ = LoadAlerts(); }" />
+            Show unacknowledged only
+        </label>
+    </div>
+    @if (AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator)
+    {
+        <button class="btn btn-secondary" @onclick="LoadAlerts">Refresh</button>
+    }
+</div>
+
+@if (_loading)
+{
+    <div class="loading">Loading alerts...</div>
+}
+else if (_alerts.Count > 0)
+{
+    @foreach (var alert in _alerts)
+    {
+        <div class="alert-item @(alert.Severity == "Critical" ? "critical" : "")">
+            <div class="alert-header">
+                <div>
+                    <span class="badge @GetSeverityBadge(alert.Severity)">@alert.Severity</span>
+                    <strong>@alert.Title</strong>
+                </div>
+                <span class="text-sm text-muted">@alert.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</span>
+            </div>
+            <p>@alert.Message</p>
+            <div class="text-sm text-muted mt-16">
+                Line @alert.ProductionLineId · Source: @alert.Source · Type: @alert.AlertType
+            </div>
+            @if (!alert.IsAcknowledged && (AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator))
+            {
+                <button class="btn btn-secondary text-sm mt-16" @onclick="() => Acknowledge(alert.Id)">
+                    Acknowledge
+                </button>
+            }
+            else if (alert.IsAcknowledged)
+            {
+                <span class="badge badge-muted mt-16">Acknowledged</span>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="empty-state">No alerts found.</div>
+}
+
+@code {
+    private List<AlertDto> _alerts = new();
+    private bool _loading = true;
+    private bool _unacknowledgedOnly;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        await LoadAlerts();
+    }
+
+    private async Task LoadAlerts()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var url = $"/api/sensors/anomalies?unacknowledgedOnly={_unacknowledgedOnly.ToString().ToLower()}";
+            _alerts = await client.GetFromJsonAsync<List<AlertDto>>(url) ?? new();
+        }
+        catch
+        {
+            _alerts = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task Acknowledge(int alertId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PutAsync($"/api/sensors/alerts/{alertId}/acknowledge", null);
+            await LoadAlerts();
+        }
+        catch { }
+    }
+
+    private string GetSeverityBadge(string severity) => severity switch
+    {
+        "Critical" => "badge-danger",
+        "High" => "badge-danger",
+        "Medium" => "badge-warning",
+        _ => "badge-info"
+    };
+}

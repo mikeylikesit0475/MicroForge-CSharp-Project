@@ -1,0 +1,261 @@
+@page "/documents"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Documents — MicroForge</PageTitle>
+
+<h1 class="page-title">Document Management</h1>
+
+@if (AuthState.IsAdmin || AuthState.IsEngineer)
+{
+    <div class="card mb-16">
+        <div class="card-header">
+            <span class="card-title">Upload Document</span>
+        </div>
+        <div class="form-group">
+            <label for="fileUpload">File (PDF, TXT, MD — max 10MB)</label>
+            <InputFile id="fileUpload" OnChange="OnFileSelected" accept=".pdf,.txt,.md" />
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <input @bind="_category" placeholder="e.g. SOP, Spec, Report" />
+        </div>
+        @if (_uploadError != null)
+        {
+            <div class="error-text mb-16">@_uploadError</div>
+        }
+        @if (_uploadSuccess != null)
+        {
+            <div class="badge badge-success mb-16">@_uploadSuccess</div>
+        }
+        <button class="btn" @onclick="UploadFile" disabled="@(_selectedFile == null || _uploading)">
+            @if (_uploading) { <span>Uploading...</span> } else { <span>Upload</span> }
+        </button>
+    </div>
+}
+
+<div class="card mb-16">
+    <div class="card-header">
+        <span class="card-title">Semantic Search</span>
+    </div>
+    <div class="chat-input">
+        <input @bind="_searchQuery" placeholder="Search documents..." @onkeypress="OnSearchKeyPress" />
+        <button class="btn" @onclick="Search" disabled="@(_searching)">
+            @if (_searching) { <span>Searching...</span> } else { <span>Search</span> }
+        </button>
+    </div>
+    @if (_searchResults.Count > 0)
+    {
+        <div class="mt-16">
+            <div class="text-sm text-muted mb-16">@_searchResults.Count result(s)</div>
+            @foreach (var result in _searchResults)
+            {
+                <div class="card">
+                    <div class="flex-between">
+                        <span class="badge badge-info">@result.Category</span>
+                        <span class="text-sm text-muted">Similarity: @result.Similarity.ToString("F2")</span>
+                    </div>
+                    <p class="mt-16">@result.Content</p>
+                </div>
+            }
+        </div>
+    }
+    else if (_searchCompleted)
+    {
+        <div class="empty-state">No results found.</div>
+    }
+</div>
+
+@if (_loading)
+{
+    <div class="loading">Loading documents...</div>
+}
+else if (_documents.Count > 0)
+{
+    <table class="card">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                @if (AuthState.IsAdmin)
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var doc in _documents)
+            {
+                <tr>
+                    <td>@doc.Id</td>
+                    <td>@doc.Title</td>
+                    <td><span class="badge badge-info">@doc.Category</span></td>
+                    <td class="text-sm">@(doc.FileSize / 1024) KB</td>
+                    <td><span class="badge badge-success">@doc.Status</span></td>
+                    <td class="text-sm text-muted">@doc.UploadedAt.ToString("yyyy-MM-dd")</td>
+                    @if (AuthState.IsAdmin)
+                    {
+                        <td>
+                            <button class="btn btn-danger text-sm" @onclick="() => DeleteDocument(doc.Id)">Delete</button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="empty-state">No documents uploaded yet.</div>
+}
+
+@code {
+    private List<DocumentListDto> _documents = new();
+    private List<DocumentSearchResultDto> _searchResults = new();
+    private bool _loading = true;
+    private bool _searching;
+    private bool _searchCompleted;
+    private string _searchQuery = string.Empty;
+    private string _category = string.Empty;
+    private IBrowserFile? _selectedFile;
+    private bool _uploading;
+    private string? _uploadError;
+    private string? _uploadSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        try
+        {
+            var client = AuthState.GetClient();
+            _documents = await client.GetFromJsonAsync<List<DocumentListDto>>("/api/documents") ?? new();
+        }
+        catch
+        {
+            _documents = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _uploadError = null;
+        _uploadSuccess = null;
+    }
+
+    private async Task UploadFile()
+    {
+        if (_selectedFile == null || string.IsNullOrWhiteSpace(_category))
+        {
+            _uploadError = "Please select a file and enter a category.";
+            return;
+        }
+
+        _uploading = true;
+        _uploadError = null;
+        _uploadSuccess = null;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(stream);
+            content.Add(fileContent, "file", _selectedFile.Name);
+            content.Add(new StringContent(_category), "category");
+
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync("/api/documents/upload", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<DocumentUploadResponseDto>();
+                _uploadSuccess = $"Uploaded '{result?.Title}' with {result?.ChunkCount} chunks.";
+                _documents = await client.GetFromJsonAsync<List<DocumentListDto>>("/api/documents") ?? new();
+                _selectedFile = null;
+            }
+            else
+            {
+                _uploadError = "Upload failed. Check file type and size.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Search()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+            return;
+
+        _searching = true;
+        _searchCompleted = false;
+        StateHasChanged();
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var request = new { Query = _searchQuery, TopK = 5, Category = (string?)null };
+            var response = await client.PostAsJsonAsync("/api/documents/search", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SearchResponse>();
+                _searchResults = result?.Results ?? new();
+            }
+            _searchCompleted = true;
+        }
+        catch
+        {
+            _searchResults = new();
+            _searchCompleted = true;
+        }
+        finally
+        {
+            _searching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Search();
+    }
+
+    private async Task DeleteDocument(int id)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.DeleteAsync($"/api/documents/{id}");
+            _documents = await client.GetFromJsonAsync<List<DocumentListDto>>("/api/documents") ?? new();
+        }
+        catch { }
+    }
+
+    private class SearchResponse
+    {
+        public int Count { get; set; }
+        public List<DocumentSearchResultDto> Results { get; set; } = new();
+    }
+}

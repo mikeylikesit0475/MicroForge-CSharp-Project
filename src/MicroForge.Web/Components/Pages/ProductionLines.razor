@@ -1,0 +1,147 @@
+@page "/production-lines"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Production Lines — MicroForge</PageTitle>
+
+<h1 class="page-title">Production Lines</h1>
+
+@if (AuthState.IsAdmin || AuthState.IsEngineer)
+{
+    <div class="mb-16">
+        <button class="btn" @onclick="ToggleCreateForm">+ New Production Line</button>
+    </div>
+
+    @if (_showCreate)
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Create Production Line</span>
+            </div>
+            <EditForm Model="@_newLine" OnValidSubmit="@CreateLine">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <InputText @bind-Value="_newLine.Name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <InputText @bind-Value="_newLine.Location" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Line Type</label>
+                    <InputText @bind-Value="_newLine.LineType" placeholder="e.g. Assembly, Testing, Packaging" />
+                </div>
+                @if (_createError != null)
+                {
+                    <div class="error-text mb-16">@_createError</div>
+                }
+                <button type="submit" class="btn">Create</button>
+                <button type="button" class="btn btn-secondary" @onclick="ToggleCreateForm">Cancel</button>
+            </EditForm>
+        </div>
+    }
+}
+
+@if (_loading)
+{
+    <div class="loading">Loading production lines...</div>
+}
+else if (_lines.Count > 0)
+{
+    <table class="card">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in _lines)
+            {
+                <tr>
+                    <td>@line.Id</td>
+                    <td>@line.Name</td>
+                    <td>@line.Location</td>
+                    <td>@line.LineType</td>
+                    <td>
+                        @if (line.IsActive)
+                        { <span class="badge badge-success">Active</span> }
+                        else
+                        { <span class="badge badge-muted">Inactive</span> }
+                    </td>
+                    <td class="text-sm text-muted">@line.CreatedAt.ToString("yyyy-MM-dd")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="empty-state">No production lines found.</div>
+}
+
+@code {
+    private List<ProductionLineDto> _lines = new();
+    private bool _loading = true;
+    private bool _showCreate;
+    private CreateProductionLineRequest _newLine = new();
+    private string? _createError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        try
+        {
+            var client = AuthState.GetClient();
+            _lines = await client.GetFromJsonAsync<List<ProductionLineDto>>("/api/production-lines") ?? new();
+        }
+        catch
+        {
+            _lines = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ToggleCreateForm()
+    {
+        _showCreate = !_showCreate;
+        _createError = null;
+    }
+
+    private async Task CreateLine()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsJsonAsync("/api/production-lines", _newLine);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreate = false;
+                _newLine = new CreateProductionLineRequest();
+                _lines = await client.GetFromJsonAsync<List<ProductionLineDto>>("/api/production-lines") ?? new();
+            }
+            else
+            {
+                _createError = "Failed to create production line.";
+            }
+        }
+        catch
+        {
+            _createError = "An error occurred while creating the production line.";
+        }
+    }
+}
