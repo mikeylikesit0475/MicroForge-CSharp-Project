@@ -15,6 +15,25 @@
 }
 else
 {
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span class="text-sm text-muted">Active LLM Model:</span>
+        @if (_showCustomModelInput)
+        {
+            <input @bind="_customModel" placeholder="Enter custom model..." style="padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; max-width: 200px;" />
+            <button class="btn btn-secondary text-sm" style="padding: 4px 8px;" @onclick="ToggleCustomModel">Presets</button>
+        }
+        else
+        {
+            <select @onchange="OnModelChanged" style="padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; background: white;">
+                @foreach (var model in _availableModels)
+                {
+                    <option value="@model" selected="@(model == _selectedModel)">@model</option>
+                }
+                <option value="custom">Custom...</option>
+            </select>
+        }
+    </div>
+
     <div class="chat-container">
         <div class="chat-messages" id="chatScroll">
             @foreach (var msg in _messages)
@@ -92,6 +111,50 @@ else
     private string _input = string.Empty;
     private bool _thinking;
     private List<AgentLogSummary> _history = new();
+    private string _selectedModel = "glm 5.2:cloud";
+    private string _customModel = "";
+    private bool _showCustomModelInput;
+    private List<string> _availableModels = new()
+    {
+        "glm 5.2:cloud",
+        "llama3.1",
+        "llama3.2",
+        "qwen2.5",
+        "mock-model"
+    };
+
+    private string GetModelToUse()
+    {
+        if (_showCustomModelInput || _selectedModel == "custom")
+        {
+            return string.IsNullOrWhiteSpace(_customModel) ? "glm 5.2:cloud" : _customModel.Trim();
+        }
+        return _selectedModel;
+    }
+
+    private void ToggleCustomModel()
+    {
+        _showCustomModelInput = !_showCustomModelInput;
+        if (!_showCustomModelInput)
+        {
+            _selectedModel = "glm 5.2:cloud";
+        }
+    }
+
+    private void OnModelChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "glm 5.2:cloud";
+        if (val == "custom")
+        {
+            _showCustomModelInput = true;
+            _selectedModel = "custom";
+        }
+        else
+        {
+            _selectedModel = val;
+            _showCustomModelInput = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,6 +170,13 @@ else
             {
                 var client = AuthState.GetClient();
                 _history = await client.GetFromJsonAsync<List<AgentLogSummary>>("/api/agent/history?limit=10") ?? new();
+                
+                var models = await client.GetFromJsonAsync<List<string>>("/api/agent/models");
+                if (models != null && models.Count > 0)
+                {
+                    _availableModels = models;
+                    _selectedModel = models.Contains("glm 5.2:cloud") ? "glm 5.2:cloud" : models.First();
+                }
             }
             catch { }
         }
@@ -126,7 +196,12 @@ else
         try
         {
             var client = AuthState.GetClient();
-            var request = new AgentRequestDto { Message = userMessage, SessionId = Guid.NewGuid().ToString() };
+            var request = new AgentRequestDto 
+            { 
+                Message = userMessage, 
+                SessionId = Guid.NewGuid().ToString(),
+                Model = GetModelToUse()
+            };
             var response = await client.PostAsJsonAsync("/api/agent/chat", request);
 
             if (response.IsSuccessStatusCode)

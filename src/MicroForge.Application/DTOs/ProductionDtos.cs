@@ -48,6 +48,9 @@ public class SensorReadingDto
     public DateTime Timestamp { get; set; }
     public bool IsAnomaly { get; set; }
     public string? AnomalyType { get; set; }
+    public decimal? Mean { get; set; }
+    public decimal? Ucl { get; set; }
+    public decimal? Lcl { get; set; }
 }
 
 public class AlertDto
@@ -99,6 +102,7 @@ public class AgentRequestDto
 {
     public string Message { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
+    public string? Model { get; set; }
 }
 
 public class AgentResponseDto

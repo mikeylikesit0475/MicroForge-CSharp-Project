@@ -14,4 +14,8 @@ public class DefectRecord
     public string? RootCause { get; set; }
     public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
     public int DetectedByUserId { get; set; }
+    
+    public decimal CoordinateX { get; set; }
+    public decimal CoordinateY { get; set; }
+    public string ClassifiedType { get; set; } = "Unknown";
 }

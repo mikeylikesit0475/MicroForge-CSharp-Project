@@ -14,4 +14,7 @@ public class SensorReading
     public DateTime Timestamp { get; set; }
     public bool IsAnomaly { get; set; }
     public string? AnomalyType { get; set; }
+    public decimal? Mean { get; set; }
+    public decimal? Ucl { get; set; }
+    public decimal? Lcl { get; set; }
 }

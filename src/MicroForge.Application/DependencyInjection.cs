@@ -16,6 +16,9 @@ public static class DependencyInjection
         services.AddScoped<IProductionService, ProductionService>();
         services.AddScoped<IAgentAppService, AgentAppService>();
         services.AddScoped<IDocumentAppService, DocumentAppService>();
+        services.AddScoped<IWipService, WipService>();
+        services.AddScoped<IFdcService, FdcService>();
+        services.AddScoped<IFabExpansionService, FabExpansionService>();
         return services;
     }
 }

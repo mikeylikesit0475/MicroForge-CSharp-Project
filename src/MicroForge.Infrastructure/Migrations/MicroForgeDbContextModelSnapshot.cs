@@ -123,11 +123,56 @@ namespace MicroForge.Infrastructure.Migrations
                     b.ToTable("Alerts");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.CapaAction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActionDescription")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssignedTo")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LotId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LotId");
+
+                    b.ToTable("CapaActions");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.DefectRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClassifiedType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CoordinateX")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CoordinateY")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DefectType")
                         .IsRequired()
@@ -250,6 +295,138 @@ namespace MicroForge.Infrastructure.Migrations
                     b.HasIndex("DocumentId");
 
                     b.ToTable("DocumentChunks");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.EcoRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApprovedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChangeDetail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeName");
+
+                    b.ToTable("EcoRecords");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.Lot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ActiveRouteStepId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActiveRouteStepId");
+
+                    b.HasIndex("LotNumber")
+                        .IsUnique();
+
+                    b.ToTable("Lots");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.LotChecklistProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CompletedByOperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LotId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WorkInstructionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkInstructionId");
+
+                    b.HasIndex("LotId", "WorkInstructionId")
+                        .IsUnique();
+
+                    b.ToTable("LotChecklistProgresses");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.LotMovementLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("EnteredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExitedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LotId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OperatorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RouteStepId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LotId");
+
+                    b.HasIndex("RouteStepId");
+
+                    b.ToTable("LotMovementLogs");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionEvent", b =>
@@ -381,6 +558,38 @@ namespace MicroForge.Infrastructure.Migrations
                     b.ToTable("ProductionRuns");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.RecipeVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParameterPayloadXml")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeName", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("RecipeVersions");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -408,6 +617,32 @@ namespace MicroForge.Infrastructure.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.RouteStep", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SequenceOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StepName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StepName")
+                        .IsUnique();
+
+                    b.ToTable("RouteSteps");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.SensorReading", b =>
                 {
                     b.Property<long>("Id")
@@ -420,6 +655,12 @@ namespace MicroForge.Infrastructure.Migrations
                     b.Property<bool>("IsAnomaly")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal?>("Lcl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Mean")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("ProductionLineId")
                         .HasColumnType("INTEGER");
 
@@ -429,6 +670,9 @@ namespace MicroForge.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Ucl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Unit")
@@ -443,6 +687,99 @@ namespace MicroForge.Infrastructure.Migrations
                     b.HasIndex("ProductionLineId", "Timestamp");
 
                     b.ToTable("SensorReadings");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.ShiftLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActiveAlertsSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CompletedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HandoverCompleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ShiftName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SummaryNotes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShiftLogs");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.ToolMaintenanceLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("CumulativeRuntimeHours")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("HoursSinceLastPM")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("NextScheduledPM")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductionLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ToolStatus")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductionLineId");
+
+                    b.ToTable("ToolMaintenanceLogs");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.ToolQualification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsQualified")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductionLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("QualifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecipeName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductionLineId", "RecipeName")
+                        .IsUnique();
+
+                    b.ToTable("ToolQualifications");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.User", b =>
@@ -533,6 +870,63 @@ namespace MicroForge.Infrastructure.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Wafer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LotId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SlotPosition")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WaferId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LotId");
+
+                    b.HasIndex("WaferId")
+                        .IsUnique();
+
+                    b.ToTable("Wafers");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.WorkInstruction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsMandatory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RouteStepId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TaskDescription")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RouteStepId");
+
+                    b.ToTable("WorkInstructions");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.Alert", b =>
                 {
                     b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
@@ -570,6 +964,55 @@ namespace MicroForge.Infrastructure.Migrations
                     b.Navigation("Document");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Lot", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.RouteStep", "ActiveRouteStep")
+                        .WithMany()
+                        .HasForeignKey("ActiveRouteStepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActiveRouteStep");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.LotChecklistProgress", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Lot", "Lot")
+                        .WithMany()
+                        .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MicroForge.Domain.Entities.WorkInstruction", "WorkInstruction")
+                        .WithMany()
+                        .HasForeignKey("WorkInstructionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lot");
+
+                    b.Navigation("WorkInstruction");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.LotMovementLog", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Lot", "Lot")
+                        .WithMany("MovementLogs")
+                        .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MicroForge.Domain.Entities.RouteStep", "RouteStep")
+                        .WithMany()
+                        .HasForeignKey("RouteStepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lot");
+
+                    b.Navigation("RouteStep");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionEvent", b =>
                 {
                     b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
@@ -600,6 +1043,28 @@ namespace MicroForge.Infrastructure.Migrations
                 {
                     b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
                         .WithMany("SensorReadings")
+                        .HasForeignKey("ProductionLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionLine");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.ToolMaintenanceLog", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
+                        .WithMany()
+                        .HasForeignKey("ProductionLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductionLine");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.ToolQualification", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
+                        .WithMany()
                         .HasForeignKey("ProductionLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -653,9 +1118,38 @@ namespace MicroForge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Wafer", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Lot", "Lot")
+                        .WithMany("Wafers")
+                        .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lot");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.WorkInstruction", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.RouteStep", "RouteStep")
+                        .WithMany()
+                        .HasForeignKey("RouteStepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RouteStep");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.Document", b =>
                 {
                     b.Navigation("DocumentChunks");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.Lot", b =>
+                {
+                    b.Navigation("MovementLogs");
+
+                    b.Navigation("Wafers");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionLine", b =>

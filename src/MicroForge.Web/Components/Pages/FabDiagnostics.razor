@@ -1,0 +1,835 @@
+@page "/fab"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+@using System.Net.Http.Json
+@using MicroForge.Domain.Entities
+@using MicroForge.Infrastructure.Events
+
+<PageTitle>Fab Diagnostics &amp; Automation — MicroForge</PageTitle>
+
+<h1 class="page-title">Advanced Fab Diagnostics &amp; Automation</h1>
+
+<div class="card mb-16">
+    <div class="tabs-header">
+        <button class="tab-btn @(_activeTab == "oee" ? "active" : "")" @onclick='() => SetTab("oee")'>OEE &amp; Tool Health</button>
+        <button class="tab-btn @(_activeTab == "defect" ? "active" : "")" @onclick='() => SetTab("defect")'>Spatial Defect Map</button>
+        <button class="tab-btn @(_activeTab == "rca" ? "active" : "")" @onclick='() => SetTab("rca")'>Root Cause Analytics</button>
+        <button class="tab-btn @(_activeTab == "secs" ? "active" : "")" @onclick='() => SetTab("secs")'>SECS/GEM Console</button>
+        <button class="tab-btn @(_activeTab == "workflows" ? "active" : "")" @onclick='() => SetTab("workflows")'>Workflows (CAPA/ECO)</button>
+        <button class="tab-btn @(_activeTab == "qual" ? "active" : "")" @onclick='() => SetTab("qual")'>Qualifications</button>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="loading">Loading diagnostic parameters...</div>
+}
+else
+{
+    @if (_activeTab == "oee")
+    {
+        <!-- OEE & PM TAB -->
+        <div class="grid-2">
+            <!-- OEE METRICS -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Overall Equipment Effectiveness (OEE)</span>
+                </div>
+                <p class="text-sm text-muted mb-16">Calculated in real-time based on Availability, Performance, and Quality parameters.</p>
+                
+                @foreach (var oee in _oeeSummaries)
+                {
+                    <div class="oee-block mb-16 border-bottom-sm">
+                        <div class="flex-between mb-8">
+                            <strong>@oee.ProductionLineName</strong>
+                            <span class="badge @(oee.Oee < 85 ? "badge-warning" : "badge-success")">OEE: @oee.Oee%</span>
+                        </div>
+                        <div class="grid-3 text-xs mb-8">
+                            <div>Availability: <span class="font-semibold">@oee.Availability%</span></div>
+                            <div>Performance: <span class="font-semibold">@oee.Performance%</span></div>
+                            <div>Quality: <span class="font-semibold">@oee.Quality%</span></div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill @(oee.Oee < 85 ? "fill-warning" : "fill-good")" style="width: @oee.Oee%"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- TOOL MAINTENANCE AND PM -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Preventive Maintenance (PM) Schedule</span>
+                </div>
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Tool Name</th>
+                            <th>Status</th>
+                            <th>Hours Since PM</th>
+                            <th>Next PM Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tool in _maintLogs)
+                        {
+                            <tr>
+                                <td>Line @tool.ProductionLineId</td>
+                                <td>
+                                    <span class="badge @(tool.ToolStatus == "Up" ? "badge-success" : "badge-danger")">@tool.ToolStatus</span>
+                                </td>
+                                <td>@tool.HoursSinceLastPM.ToString("F1") / 300 hrs</td>
+                                <td>@tool.NextScheduledPM.ToString("d")</td>
+                                <td>
+                                    <button class="btn btn-secondary btn-xs" @onclick="() => RunPM(tool.ProductionLineId)">Execute PM</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "defect")
+    {
+        <!-- SPATIAL DEFECT MAP TAB -->
+        <div class="grid-2">
+            <!-- SVG WAFER MAP -->
+            <div class="card flex-center">
+                <div class="card-header w-100 mb-16">
+                    <span class="card-title">Wafer Defect Spatial Coordinates</span>
+                </div>
+                <div class="wafer-svg-container">
+                    <svg viewBox="-110 -110 220 220" width="300" height="300" class="wafer-canvas">
+                        <!-- Silicon Wafer Circle -->
+                        <circle cx="0" cy="0" r="100" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2" />
+                        <!-- Flat Notch at bottom -->
+                        <path d="M -15 98.8 L 15 98.8" stroke="#9ca3af" stroke-width="2" fill="none" />
+                        <!-- Grid lines -->
+                        <line x1="-100" y1="0" x2="100" y2="0" stroke="#d1d5db" stroke-dasharray="2" />
+                        <line x1="0" y1="-100" x2="0" y2="100" stroke="#d1d5db" stroke-dasharray="2" />
+                        <!-- Plotted defects -->
+                        @foreach (var defect in _defects)
+                        {
+                            <circle cx="@defect.X" cy="@defect.Y" r="4.5" fill="@GetDefectColor(defect.Type)" />
+                        }
+                    </svg>
+                </div>
+            </div>
+
+            <!-- DEFECT PATTERN LEGEND -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Automated Defect Classification (ADC)</span>
+                </div>
+                <p class="text-sm text-muted mb-16">
+                    Defects classified using spatial coordinate clustering. Radial clusters usually indicate spin-coater splash faults, while line patterns suggest robotic arm scratch damage.
+                </p>
+                <div class="defect-legend-list">
+                    <div class="flex-align mb-12">
+                        <span class="color-dot bg-red mr-8"></span>
+                        <div><strong>Robotic Scratch:</strong> Robotic arm mechanical slide contact.</div>
+                    </div>
+                    <div class="flex-align mb-12">
+                        <span class="color-dot bg-orange mr-8"></span>
+                        <div><strong>Spin Coating Splash:</strong> Solvent droplet sprayback during acceleration.</div>
+                    </div>
+                    <div class="flex-align mb-12">
+                        <span class="color-dot bg-blue mr-8"></span>
+                        <div><strong>Particle Contamination:</strong> Cleanroom air particulate drift.</div>
+                    </div>
+                    <div class="flex-align mb-12">
+                        <span class="color-dot bg-purple mr-8"></span>
+                        <div><strong>Bridge Short:</strong> Photoresist exposure shadow bridge.</div>
+                    </div>
+                </div>
+
+                <h3 class="section-title text-sm mt-24 mb-8">Yield Pareto Defect Breakdown</h3>
+                <div class="flex-column gap-8 text-sm">
+                    <div>Scratch Defect Severity Index: <strong class="text-danger">Critical (65%)</strong></div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-critical" style="width: 65%"></div>
+                    </div>
+                    <div>Particle Count Variance: <strong class="text-warning">Warning (25%)</strong></div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill fill-warning" style="width: 25%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "rca")
+    {
+        <!-- ROOT CAUSE ANALYTICS (RCA) -->
+        <div class="grid-2">
+            <!-- GOLDEN RUN COMPARISON CHART -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Chamber Temperature Run Trace vs. Golden Baseline</span>
+                </div>
+                <p class="text-xs text-muted mb-12">Renders actual sensor values (red line) against the target golden run baseline profile (green line).</p>
+                <div class="chart-container">
+                    <svg viewBox="0 0 400 200" class="graph-svg">
+                        <!-- Chart Grid lines -->
+                        <line x1="40" y1="180" x2="380" y2="180" stroke="#d1d5db" />
+                        <line x1="40" y1="20" x2="40" y2="180" stroke="#d1d5db" />
+                        
+                        <!-- Golden Line Path -->
+                        <path d="@_goldenPath" fill="none" stroke="#10b981" stroke-width="2.5" />
+                        <!-- Actual Line Path -->
+                        <path d="@_actualPath" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="1" />
+
+                        <!-- Graph Labels -->
+                        <text x="10" y="25" class="graph-text">500°</text>
+                        <text x="10" y="100" class="graph-text">400°</text>
+                        <text x="10" y="175" class="graph-text">300°</text>
+                        <text x="200" y="195" class="graph-text">Process Seconds</text>
+                    </svg>
+                </div>
+                <div class="flex-center mt-12 gap-16 text-xs font-semibold">
+                    <span class="flex-align"><span class="color-line bg-green mr-8"></span> Golden Run (Ideal Target)</span>
+                    <span class="flex-align"><span class="color-line bg-red mr-8"></span> Process Lot Trace (Actual)</span>
+                </div>
+            </div>
+
+            <!-- CORRELATION SUMMARY -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Yield Correlation Analysis (Pearson r)</span>
+                </div>
+                <p class="text-sm text-muted mb-16">
+                    Compares finished lot yields against average sensor telemetry over the past 30 days. Pearson r values range from -1.0 (strongly negative) to +1.0 (strongly positive).
+                </p>
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Telemetry Variable</th>
+                            <th>Pearson r</th>
+                            <th>Interpretation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var corr in _correlations)
+                        {
+                            <tr>
+                                <td><strong>@corr.VariableName</strong></td>
+                                <td>
+                                    <span class="font-semibold @(Math.Abs(corr.CorrelationCoefficient) > 0.5m ? "text-danger" : "text-muted")">
+                                        @corr.CorrelationCoefficient
+                                    </span>
+                                </td>
+                                <td class="text-xs text-muted">@corr.Interpretation</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "secs")
+    {
+        <!-- SECS/GEM TERMINAL TAB -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title flex-align">
+                    <span class="pulse-green mr-8"></span> Host HSMS Communication Logger (Port 5555)
+                </span>
+            </div>
+            <p class="text-sm text-muted mb-16"> Displays real-time message packages received/transmitted by the simulated HSMS SECS-II socket interface.</p>
+
+            <div class="secs-terminal mb-16">
+                @foreach (var log in _secsLogs)
+                {
+                    <div class="terminal-line">
+                        <span class="term-time">[@log.Timestamp.ToString("HH:mm:ss")]</span>
+                        @if (log.Direction == "IN")
+                        {
+                            <span class="term-in">◀ IN</span>
+                        }
+                        else
+                        {
+                            <span class="term-out">▶ OUT</span>
+                        }
+                        <span class="term-type font-semibold">@log.MsgType</span>
+                        <span class="term-hex text-xs">@log.RawBytesHex</span>
+                        <span class="term-desc text-muted">@log.Description</span>
+                    </div>
+                }
+            </div>
+
+            <div class="flex-gap">
+                <button class="btn" @onclick="PingSecsHost">Send Online Ping (S1F1)</button>
+                <button class="btn btn-secondary" @onclick="RefreshSecsLogs">Refresh Console Logs</button>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "workflows")
+    {
+        <!-- FAB WORKFLOWS TAB -->
+        <div class="grid-2">
+            <!-- CAPA WORKFLOW ACTIONS -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Corrective and Preventive Actions (CAPA)</span>
+                </div>
+                <div class="form-group mt-16 mb-16">
+                    <label>Action Description</label>
+                    <input @bind="_newCapaDesc" placeholder="e.g. Inspect slot 12 robotic wafer fork teeth" />
+                    <label class="mt-8">Assignee</label>
+                    <input @bind="_newCapaAssignee" placeholder="e.g. engineer_bill" />
+                    <button class="btn mt-12 w-100" @onclick="SubmitCapa">Create CAPA Action</button>
+                </div>
+
+                <h3 class="section-title text-sm mb-8">Active CAPA Action Items</h3>
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Approved By</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var capa in _capas)
+                        {
+                            <tr>
+                                <td class="text-xs">@capa.ActionDescription</td>
+                                <td>@capa.AssignedTo</td>
+                                <td><span class="badge @(capa.Status == "Approved" ? "badge-success" : "badge-warning")">@capa.Status</span></td>
+                                <td>@(string.IsNullOrEmpty(capa.ApprovedBy) ? "—" : capa.ApprovedBy)</td>
+                                <td>
+                                    @if (capa.Status != "Approved")
+                                    {
+                                        <button class="btn btn-success btn-xs" @onclick="() => ApproveCapa(capa.Id)">Approve</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- SHIFT PASS-DOWN handover log -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Shift Pass-Down logs</span>
+                </div>
+                <div class="form-group mt-16 mb-16">
+                    <label>Handover Title / Shift</label>
+                    <input @bind="_newShiftName" placeholder="e.g. Day Shift A handover to Night Shift B" />
+                    <label class="mt-8">Operations Summary Notes</label>
+                    <textarea @bind="_newShiftNotes" class="textarea-sm" placeholder="e.g. Chamber 1 RF stability issue resolved. Cleanroom humidity stable at 45%."></textarea>
+                    <button class="btn mt-12 w-100" @onclick="SubmitShiftLog">Post Shift Pass-Down</button>
+                </div>
+
+                <h3 class="section-title text-sm mb-8">Completed Handover History</h3>
+                <div class="timeline">
+                    @foreach (var log in _shiftLogs)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-badge badge-success"></div>
+                            <div class="timeline-panel">
+                                <strong>@log.ShiftName</strong> <span class="text-xs text-muted">(@log.CreatedAt.ToString("g"))</span>
+                                <p class="text-xs mt-8">@log.SummaryNotes</p>
+                                <div class="text-xs text-muted mt-8">Completed By: @log.CompletedBy</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "qual")
+    {
+        <!-- TOOL QUALIFICATION GRID -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Chamber Tool Qualifications</span>
+            </div>
+            <p class="text-sm text-muted mb-16">
+                Qualify or unqualify specific process recipes for production chambers. Gated routing checks block lot entry into unqualified chambers.
+            </p>
+            <table class="table-sm">
+                <thead>
+                    <tr>
+                        <th>Chamber / Production Line</th>
+                        <th>Recipe / Process Flow</th>
+                        <th>Qualification Status</th>
+                        <th>Last Qualified At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var q in _qualifications)
+                    {
+                        <tr>
+                            <td><strong>Line @q.ProductionLineId</strong></td>
+                            <td><code>@q.RecipeName</code></td>
+                            <td>
+                                <span class="badge @(q.IsQualified ? "badge-success" : "badge-danger")">
+                                    @(q.IsQualified ? "Qualified" : "UNQUALIFIED")
+                                </span>
+                            </td>
+                            <td>@q.QualifiedAt.ToString("g")</td>
+                            <td>
+                                @if (q.IsQualified)
+                                {
+                                    <button class="btn btn-danger btn-xs" @onclick="() => ToggleQualification(q.ProductionLineId, q.RecipeName, false)">Unqualify</button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-success btn-xs" @onclick="() => ToggleQualification(q.ProductionLineId, q.RecipeName, true)">Qualify</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+<style>
+    .w-100 { width: 100%; }
+    .w-100 input, .w-100 textarea { width: 100%; box-sizing: border-box; }
+    .textarea-sm {
+        height: 60px;
+        padding: 6px;
+        font-size: 13px;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .tabs-header {
+        display: flex;
+        border-bottom: 2px solid #e5e7eb;
+        gap: 16px;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 16px;
+        font-weight: 500;
+        cursor: pointer;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+        transition: color 0.2s, border-bottom 0.2s;
+    }
+    .tab-btn.active {
+        color: #10b981;
+        border-bottom: 2px solid #10b981;
+    }
+    .tab-btn:hover {
+        color: #10b981;
+    }
+    .flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .flex-align {
+        display: flex;
+        align-items: center;
+    }
+    .oee-block {
+        padding-bottom: 12px;
+    }
+    .border-bottom-sm {
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e5e7eb;
+        height: 8px;
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+    }
+    .fill-good { background-color: #10b981; }
+    .fill-warning { background-color: #f59e0b; }
+    .fill-critical { background-color: #ef4444; }
+    .table-sm {
+        width: 100%;
+        font-size: 12px;
+        border-collapse: collapse;
+    }
+    .table-sm th, .table-sm td {
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+    .btn-xs {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    .flex-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .wafer-svg-container {
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .bg-red { background-color: #ef4444; }
+    .bg-orange { background-color: #f59e0b; }
+    .bg-blue { background-color: #3b82f6; }
+    .bg-purple { background-color: #8b5cf6; }
+    .bg-green { background-color: #10b981; }
+    
+    .color-line {
+        height: 3px;
+        width: 20px;
+        display: inline-block;
+    }
+    .chart-container {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .graph-svg {
+        width: 100%;
+        height: auto;
+    }
+    .graph-text {
+        font-size: 9px;
+        fill: #6b7280;
+    }
+    .gap-16 { gap: 16px; }
+    .gap-8 { gap: 8px; }
+    
+    /* SECS Console */
+    .secs-terminal {
+        background: #111827;
+        color: #10b981;
+        font-family: monospace;
+        padding: 16px;
+        height: 300px;
+        overflow-y: scroll;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+    .terminal-line {
+        margin-bottom: 8px;
+        line-height: 1.5;
+        border-bottom: 1px solid #1f2937;
+        padding-bottom: 4px;
+    }
+    .term-time { color: #6b7280; margin-right: 8px; }
+    .term-in { color: #f59e0b; margin-right: 8px; }
+    .term-out { color: #3b82f6; margin-right: 8px; }
+    .term-hex { color: #9ca3af; margin-right: 8px; font-family: monospace; }
+    .term-desc { color: #d1d5db; }
+    
+    .pulse-green {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseGreen 1.6s infinite;
+        display: inline-block;
+    }
+    @@keyframes pulseGreen {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+    }
+    
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+        border-left: 2px solid #e5e7eb;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 16px;
+    }
+    .timeline-badge {
+        position: absolute;
+        left: -27px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+    }
+    .timeline-panel {
+        background: #f9fafb;
+        border: 1px solid #f3f4f6;
+        border-radius: 6px;
+        padding: 10px;
+    }
+</style>
+
+@code {
+    private string _activeTab = "oee";
+    private bool _loading = true;
+
+    // Loaded data
+    private List<OeeSummaryDto> _oeeSummaries = new();
+    private List<ToolMaintenanceLog> _maintLogs = new();
+    private List<CorrelationResultDto> _correlations = new();
+    private List<CapaAction> _capas = new();
+    private List<EcoRecord> _ecos = new();
+    private List<ShiftLog> _shiftLogs = new();
+    private List<SecsMessageLog> _secsLogs = new();
+    private List<ToolQualification> _qualifications = new();
+
+    // Defect map seeding
+    private class SimpleDefect { public double X; public double Y; public string Type { get; set; } = string.Empty; }
+    private List<SimpleDefect> _defects = new();
+
+    // SVG Graph paths
+    private string _goldenPath = string.Empty;
+    private string _actualPath = string.Empty;
+
+    // Forms
+    private string _newCapaDesc = string.Empty;
+    private string _newCapaAssignee = string.Empty;
+    private string _newShiftName = string.Empty;
+    private string _newShiftNotes = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        SeedWaferDefects();
+        GenerateGraphPaths();
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _oeeSummaries = await client.GetFromJsonAsync<List<OeeSummaryDto>>("/api/fab/oee") ?? new();
+            _maintLogs = await client.GetFromJsonAsync<List<ToolMaintenanceLog>>("/api/fab/maintenance") ?? new();
+            _correlations = await client.GetFromJsonAsync<List<CorrelationResultDto>>("/api/fab/correlation") ?? new();
+            _capas = await client.GetFromJsonAsync<List<CapaAction>>("/api/fab/capas") ?? new();
+            _ecos = await client.GetFromJsonAsync<List<EcoRecord>>("/api/fab/ecos") ?? new();
+            _shiftLogs = await client.GetFromJsonAsync<List<ShiftLog>>("/api/fab/shiftlogs") ?? new();
+            _secsLogs = await client.GetFromJsonAsync<List<SecsMessageLog>>("/api/fab/secslogs") ?? new();
+            _qualifications = await client.GetFromJsonAsync<List<ToolQualification>>("/api/wip/qualifications") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading Fab diagnostics: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SeedWaferDefects()
+    {
+        var rand = new Random(42);
+        var types = new[] { "Scratch", "Particle", "Corrosion", "Bridge" };
+        
+        // Seed 12 random defects within circle radius 90
+        for (int i = 0; i < 12; i++)
+        {
+            double r = rand.NextDouble() * 85;
+            double theta = rand.NextDouble() * 2 * Math.PI;
+            _defects.Add(new SimpleDefect
+            {
+                X = Math.Round(r * Math.Cos(theta), 1),
+                Y = Math.Round(r * Math.Sin(theta), 1),
+                Type = types[rand.Next(types.Length)]
+            });
+        }
+    }
+
+    private string GetDefectColor(string type) => type switch
+    {
+        "Scratch" => "#ef4444",    // Red
+        "Particle" => "#3b82f6",   // Blue
+        "Corrosion" => "#f59e0b",  // Orange
+        "Bridge" => "#8b5cf6",     // Purple
+        _ => "#9ca3af"
+    };
+
+    private void GenerateGraphPaths()
+    {
+        // Generates SVG path coordinates for a sine wave trace
+        // golden: y = 100 + 40 * sin(x * 0.1)
+        var goldenPoints = new List<string>();
+        var actualPoints = new List<string>();
+
+        for (int i = 0; i <= 30; i++)
+        {
+            double x = 40 + (double)i * 11;
+            double yGolden = 100 + 50 * Math.Sin(i * 0.2);
+            goldenPoints.Add($"{x},{yGolden}");
+
+            // Actual has some variation / noise
+            double noise = Math.Sin(i * 0.6) * 8.0;
+            if (i > 15 && i < 22) noise += 20.0; // Simulated process heat spike
+            double yActual = yGolden + noise;
+            actualPoints.Add($"{x},{yActual}");
+        }
+
+        _goldenPath = "M " + string.Join(" L ", goldenPoints);
+        _actualPath = "M " + string.Join(" L ", actualPoints);
+    }
+
+    private async Task RunPM(int lineId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/fab/maintenance/record?lineId={lineId}&status=PM&runtime=0", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error running PM: {ex.Message}");
+        }
+    }
+
+    private async Task SubmitCapa()
+    {
+        if (string.IsNullOrWhiteSpace(_newCapaDesc) || string.IsNullOrWhiteSpace(_newCapaAssignee)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/fab/capas/create?description={Uri.EscapeDataString(_newCapaDesc)}&assignee={Uri.EscapeDataString(_newCapaAssignee)}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _newCapaDesc = string.Empty;
+                _newCapaAssignee = string.Empty;
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating CAPA: {ex.Message}");
+        }
+    }
+
+    private async Task ApproveCapa(int capaId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/fab/capas/{capaId}/approve?approver={Uri.EscapeDataString(AuthState.Username)}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error approving CAPA: {ex.Message}");
+        }
+    }
+
+    private async Task SubmitShiftLog()
+    {
+        if (string.IsNullOrWhiteSpace(_newShiftName) || string.IsNullOrWhiteSpace(_newShiftNotes)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/fab/shiftlogs/create?shiftName={Uri.EscapeDataString(_newShiftName)}&notes={Uri.EscapeDataString(_newShiftNotes)}&summary=All%20Clear&operatorName={Uri.EscapeDataString(AuthState.Username)}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _newShiftName = string.Empty;
+                _newShiftNotes = string.Empty;
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error posting Shift log: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshSecsLogs()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _secsLogs = await client.GetFromJsonAsync<List<SecsMessageLog>>("/api/fab/secslogs") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing SECS logs: {ex.Message}");
+        }
+    }
+
+    private async Task PingSecsHost()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync("/api/fab/secslogs/inject?direction=IN&msgType=S1F1&hex=00 00 00 0A 00 01 01 01 00 00&desc=Online check request from Host client terminal.", null);
+            await client.PostAsync("/api/fab/secslogs/inject?direction=OUT&msgType=S1F2&hex=00 00 00 0A 00 01 01 02 00 00&desc=Online acknowledgement response. Equipment online.", null);
+            await RefreshSecsLogs();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending SECS ping: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleQualification(int lineId, string recipeName, bool qualified)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/wip/qualifications/set?lineId={lineId}&recipeName={Uri.EscapeDataString(recipeName)}&qualified={qualified}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling qualification: {ex.Message}");
+        }
+    }
+}

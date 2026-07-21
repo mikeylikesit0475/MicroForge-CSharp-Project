@@ -84,6 +84,7 @@ public class AgentRequest
     public List<string> Roles { get; init; } = new();
     public List<int> ProductionLineIds { get; init; } = new();
     public List<AgentMessage> History { get; init; } = new();
+    public string? Model { get; init; }
 }
 
 /// <summary>
@@ -118,6 +119,7 @@ public class AgentMessage
 public interface ILlmClient
 {
     Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken ct = default);
+    Task<List<string>> GetAvailableModelsAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -128,6 +130,7 @@ public class LlmRequest
     public string SystemPrompt { get; init; } = string.Empty;
     public List<AgentMessage> Messages { get; init; } = new();
     public List<ToolDefinition> AvailableTools { get; init; } = new();
+    public string? ModelOverride { get; init; }
 }
 
 /// <summary>

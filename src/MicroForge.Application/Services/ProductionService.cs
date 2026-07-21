@@ -224,7 +224,17 @@ public class ProductionService : IProductionService
 
     private static SensorReadingDto MapReading(SensorReading r) => new()
     {
-        Id = r.Id, ProductionLineId = r.ProductionLineId, SensorType = r.SensorType, Value = r.Value, Unit = r.Unit, Timestamp = r.Timestamp, IsAnomaly = r.IsAnomaly, AnomalyType = r.AnomalyType
+        Id = r.Id,
+        ProductionLineId = r.ProductionLineId,
+        SensorType = r.SensorType,
+        Value = r.Value,
+        Unit = r.Unit,
+        Timestamp = r.Timestamp,
+        IsAnomaly = r.IsAnomaly,
+        AnomalyType = r.AnomalyType,
+        Mean = r.Mean,
+        Ucl = r.Ucl,
+        Lcl = r.Lcl
     };
 
     private static AlertDto MapAlert(Alert a) => new()

@@ -7,9 +7,9 @@
 
 ## TL;DR
 
-- **All 6 sprints complete.** Every story implemented including Could Have items.
-- **175/175 story points delivered** across 40 stories.
-- **214 tests passing** (174 unit, 20 integration, 20 agent). Build: 0 errors, 0 warnings.
+- **All 6 sprints and Fab Expansion Phases 1-6 complete.**
+- **175 story points delivered plus advanced semiconductor features.**
+- **240 tests passing** (196 unit, 24 integration, 20 agent). Build: 0 errors, 0 warnings.
 - **CI pipeline** (GitHub Actions) — build → test → Docker image on every push to main.
 - **Performance baseline** project — measures p50/p95/p99 for 8 endpoints.
 - **Tech debt:** 2 open items (TD-001 SQLite, TD-002 in-memory vector store) — both acceptable for demo.
@@ -20,10 +20,10 @@
 
 ```bash
 dotnet build                              # 0 errors, 0 warnings
-dotnet test --no-build                    # 214 tests pass
-dotnet test tests/MicroForge.UnitTests    # 174 tests
+dotnet test --no-build                    # 240 tests pass
+dotnet test tests/MicroForge.UnitTests    # 196 tests
 dotnet test tests/MicroForge.AgentTests   # 20 tests
-dotnet test tests/MicroForge.IntegrationTests  # 20 tests
+dotnet test tests/MicroForge.IntegrationTests  # 24 tests
 ```
 
 ---
@@ -32,14 +32,14 @@ dotnet test tests/MicroForge.IntegrationTests  # 20 tests
 
 ```
 src/
-  MicroForge.Domain/          — Entities, Enums, Interfaces, Configuration (zero infra deps)
-  MicroForge.Application/     — DTOs, App Services, DI registration
-  MicroForge.Infrastructure/  — EF Core, AI/Agent, RAG, Events, Auth, Cache, Telemetry
-  MicroForge.Web/             — Controllers, Hubs, Program.cs, Middleware
+  src/MicroForge.Domain/          — Entities, Enums, Interfaces, Configuration (zero infra deps)
+  src/MicroForge.Application/     — DTOs, App Services, DI registration
+  src/MicroForge.Infrastructure/  — EF Core, AI/Agent, RAG, Events, Auth, Cache, Telemetry
+  src/MicroForge.Web/             — Controllers, Hubs, Program.cs, Middleware, Blazor UI
 tests/
-  MicroForge.UnitTests/       — 174 tests (services, tools, anomaly, chunker, cache, etc.)
-  MicroForge.AgentTests/      — 20 tests (agent runtime, tool dispatch, multi-step)
-  MicroForge.IntegrationTests/— 20 tests (WebApplicationFactory, auth, CRUD, agent chat)
+  tests/MicroForge.UnitTests/       — 196 tests (services, tools, anomaly, chunker, cache, closed-loop, etc.)
+  tests/MicroForge.AgentTests/      — 20 tests (agent runtime, tool dispatch, multi-step)
+  tests/MicroForge.IntegrationTests/— 24 tests (WebApplicationFactory, auth, CRUD, agent chat, closed-loop API)
 ```
 
 ---
@@ -90,7 +90,7 @@ tests/
 ### Epic 3 — AI Agent Framework ✅
 - `AgentRuntime` — LLM ↔ Tool orchestration loop with max 10 iterations
 - `ToolRegistry` — auto-discovers and registers all `ITool` implementations
-- 10+ tools: QueryProductionDefects, QueryProductionRuns, QuerySensorReadings, QueryAlerts, GetDashboardSummary, GetProductionLineStatus, GetProductionRunSummary, CalculateStatistics, UpdateProductionRunStatus, CreateDefectRecord, AcknowledgeAlert, SearchDocuments
+- **24 tools total** including original tools and new ones: QueryProductionDefects, QueryProductionRuns, QuerySensorReadings, QueryAlerts, GetDashboardSummary, GetProductionLineStatus, GetProductionRunSummary, CalculateStatistics, UpdateProductionRunStatus, CreateDefectRecord, AcknowledgeAlert, SearchDocuments, QueryWipLots, MoveWipLot, HoldWipLot, ReleaseWipLot, GetOeeMetrics, QueryFdcDiagnostics, ManageCapaActions, GetSecsGemLogs, ManageQualifications.
 - Agent chat endpoint (`POST /api/agent/chat`)
 - All tool invocations logged to `AgentLogs` table
 - Agent tool invocation metrics (counter by tool name + success/failure)
@@ -113,6 +113,13 @@ tests/
 - Events/alerts API endpoints
 - Rate limiting (5 req/min auth, 60 req/min general)
 - Security headers middleware (X-Frame-Options, X-Content-Type-Options, etc.)
+
+### Epic 8 — Semiconductor Roadmap Upgrades (Phases 1-6) ✅
+- **Phase 1 (SPC)**: Real-time SPC analysis checking Western Electric Rules 1, 2, and 3. SignalR event push for real-time violations.
+- **Phase 2 (WIP)**: Lot/Wafer genealogy database schemas, routing step movements, and cassette slots configuration.
+- **Phase 3 (FDC)**: Thermal Runaway, Vacuum Leak, and RF Plasma trace anomalies classifier, chamber baseline matching, and parts RUL tracking.
+- **Phases 4 & 5 (Fab Expansion)**: Simulated HSMS TCP host driver (SECS-II online pings S1F1, remote command S2F21), live OEE metrics, SVG spatial wafer defect maps, RCA Golden Run diff graphing, Pearson correlation coefficients, CAPA workflows, ECO logs, and shift logs handover timeline.
+- **Phase 6 (Closed-Loop Control)**: Gated routing qualification checks, Electronic Work Instructions (EWI) checklists, and FDC auto-disposition lot holds.
 
 ### Epic 6 — Observability & Hardening ✅ (mostly)
 - Serilog structured logging ✅
@@ -185,6 +192,6 @@ tests/
 
 If resuming work, check:
 - [ ] `dotnet build` still passes with 0 errors
-- [ ] `dotnet test` still passes 214 tests
+- [ ] `dotnet test` still passes 240 tests
 - [ ] CI pipeline runs green on GitHub Actions
 - [ ] Fill out `grading/evaluation-checklist.md` for final grade assessment

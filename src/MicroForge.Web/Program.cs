@@ -95,6 +95,7 @@ builder.Services.AddAuthorization();
 // ─── Controllers & SignalR ──────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<MicroForge.Web.Services.ProductionEventForwarder>();
 
 // ─── Swagger / OpenAPI ─────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();

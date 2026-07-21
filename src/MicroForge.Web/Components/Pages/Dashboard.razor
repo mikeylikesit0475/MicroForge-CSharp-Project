@@ -95,6 +95,9 @@ else if (_summary != null)
                             <th>Line</th>
                             <th>Sensor</th>
                             <th>Value</th>
+                            <th>Mean (Target)</th>
+                            <th>UCL (+3σ)</th>
+                            <th>LCL (-3σ)</th>
                             <th>Status</th>
                             <th>Time</th>
                         </tr>
@@ -105,12 +108,26 @@ else if (_summary != null)
                             <tr>
                                 <td>Line @reading.ProductionLineId</td>
                                 <td>@reading.SensorType</td>
-                                <td>@reading.Value @reading.Unit</td>
+                                <td><strong>@reading.Value @reading.Unit</strong></td>
+                                <td>@(reading.Mean.HasValue ? $"{reading.Mean.Value:F2} {reading.Unit}" : "—")</td>
+                                <td>@(reading.Ucl.HasValue ? $"{reading.Ucl.Value:F2} {reading.Unit}" : "—")</td>
+                                <td>@(reading.Lcl.HasValue ? $"{reading.Lcl.Value:F2} {reading.Unit}" : "—")</td>
                                 <td>
                                     @if (reading.IsAnomaly)
-                                    { <span class="badge badge-danger">Anomaly</span> }
+                                    {
+                                        @if (reading.AnomalyType == "SPC_Violation")
+                                        {
+                                            <span class="badge badge-warning">SPC Violation</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-danger">Anomaly</span>
+                                        }
+                                    }
                                     else
-                                    { <span class="badge badge-success">Normal</span> }
+                                    {
+                                        <span class="badge badge-success">Normal</span>
+                                    }
                                 </td>
                                 <td class="text-sm text-muted">@reading.Timestamp.ToString("MM/dd HH:mm")</td>
                             </tr>

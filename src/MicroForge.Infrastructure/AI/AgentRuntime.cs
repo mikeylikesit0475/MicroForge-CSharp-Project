@@ -59,7 +59,8 @@ public class AgentRuntime : IAgentRuntime
             {
                 SystemPrompt = systemPrompt,
                 Messages = conversationMessages.ToList(),
-                AvailableTools = toolDefs
+                AvailableTools = toolDefs,
+                ModelOverride = request.Model
             };
 
             var llmResponse = await _llmClient.CompleteAsync(llmRequest, ct);

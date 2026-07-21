@@ -88,4 +88,15 @@ public class AgentController : ControllerBase
         var idClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0";
         return int.TryParse(idClaim, out var id) ? id : 0;
     }
+
+    /// <summary>
+    /// Fetch all available LLM models from the configured Ollama or local LLM server.
+    /// </summary>
+    [HttpGet("models")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetModels(CancellationToken ct)
+    {
+        var models = await _agentAppService.GetAvailableModelsAsync(ct);
+        return Ok(models);
+    }
 }

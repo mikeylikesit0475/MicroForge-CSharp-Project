@@ -20,6 +20,18 @@ public class MicroForgeDbContext : DbContext
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<AgentLog> AgentLogs => Set<AgentLog>();
+    public DbSet<Lot> Lots => Set<Lot>();
+    public DbSet<Wafer> Wafers => Set<Wafer>();
+    public DbSet<RouteStep> RouteSteps => Set<RouteStep>();
+    public DbSet<LotMovementLog> LotMovementLogs => Set<LotMovementLog>();
+    public DbSet<ToolMaintenanceLog> ToolMaintenanceLogs => Set<ToolMaintenanceLog>();
+    public DbSet<RecipeVersion> RecipeVersions => Set<RecipeVersion>();
+    public DbSet<CapaAction> CapaActions => Set<CapaAction>();
+    public DbSet<EcoRecord> EcoRecords => Set<EcoRecord>();
+    public DbSet<ShiftLog> ShiftLogs => Set<ShiftLog>();
+    public DbSet<ToolQualification> ToolQualifications => Set<ToolQualification>();
+    public DbSet<WorkInstruction> WorkInstructions => Set<WorkInstruction>();
+    public DbSet<LotChecklistProgress> LotChecklistProgresses => Set<LotChecklistProgress>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,6 +120,79 @@ public class MicroForgeDbContext : DbContext
         modelBuilder.Entity<AgentLog>(e =>
         {
             e.HasIndex(a => new { a.UserId, a.Timestamp });
+        });
+
+        modelBuilder.Entity<Lot>(e =>
+        {
+            e.HasIndex(l => l.LotNumber).IsUnique();
+            e.Property(l => l.LotNumber).IsRequired().HasMaxLength(50);
+            e.Property(l => l.RecipeName).IsRequired().HasMaxLength(100);
+            e.HasOne(l => l.ActiveRouteStep).WithMany().HasForeignKey(l => l.ActiveRouteStepId);
+        });
+
+        modelBuilder.Entity<Wafer>(e =>
+        {
+            e.HasIndex(w => w.WaferId).IsUnique();
+            e.Property(w => w.WaferId).IsRequired().HasMaxLength(50);
+            e.HasOne(w => w.Lot).WithMany(l => l.Wafers).HasForeignKey(w => w.LotId);
+        });
+
+        modelBuilder.Entity<RouteStep>(e =>
+        {
+            e.HasIndex(r => r.StepName).IsUnique();
+            e.Property(r => r.StepName).IsRequired().HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<LotMovementLog>(e =>
+        {
+            e.HasIndex(m => m.LotId);
+            e.HasOne(m => m.Lot).WithMany(l => l.MovementLogs).HasForeignKey(m => m.LotId);
+            e.HasOne(m => m.RouteStep).WithMany().HasForeignKey(m => m.RouteStepId);
+        });
+
+        modelBuilder.Entity<ToolMaintenanceLog>(e =>
+        {
+            e.HasIndex(m => m.ProductionLineId);
+            e.HasOne(m => m.ProductionLine).WithMany().HasForeignKey(m => m.ProductionLineId);
+        });
+
+        modelBuilder.Entity<RecipeVersion>(e =>
+        {
+            e.HasIndex(r => new { r.RecipeName, r.VersionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<CapaAction>(e =>
+        {
+            e.HasIndex(c => c.LotId);
+        });
+
+        modelBuilder.Entity<EcoRecord>(e =>
+        {
+            e.HasIndex(ec => ec.RecipeName);
+        });
+
+        modelBuilder.Entity<ShiftLog>(e =>
+        {
+            e.Property(s => s.ShiftName).IsRequired().HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<ToolQualification>(e =>
+        {
+            e.HasIndex(q => new { q.ProductionLineId, q.RecipeName }).IsUnique();
+            e.HasOne(q => q.ProductionLine).WithMany().HasForeignKey(q => q.ProductionLineId);
+        });
+
+        modelBuilder.Entity<WorkInstruction>(e =>
+        {
+            e.HasIndex(w => w.RouteStepId);
+            e.HasOne(w => w.RouteStep).WithMany().HasForeignKey(w => w.RouteStepId);
+        });
+
+        modelBuilder.Entity<LotChecklistProgress>(e =>
+        {
+            e.HasIndex(p => new { p.LotId, p.WorkInstructionId }).IsUnique();
+            e.HasOne(p => p.Lot).WithMany().HasForeignKey(p => p.LotId);
+            e.HasOne(p => p.WorkInstruction).WithMany().HasForeignKey(p => p.WorkInstructionId);
         });
     }
 }

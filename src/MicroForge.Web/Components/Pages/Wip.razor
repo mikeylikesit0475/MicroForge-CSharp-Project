@@ -1,0 +1,572 @@
+@page "/wip"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+@using System.Net.Http.Json
+
+<PageTitle>WIP &amp; Lot Tracking — MicroForge</PageTitle>
+
+<h1 class="page-title">WIP &amp; Wafer Genealogy</h1>
+
+@if (_loading)
+{
+    <div class="loading">Loading WIP status...</div>
+}
+else
+{
+    <div class="grid-2">
+        <!-- LOTS LIST & ACTIONS -->
+        <div class="flex-column">
+            <!-- CREATE NEW LOT CARD -->
+            @if (AuthState.IsAdmin || AuthState.IsEngineer)
+            {
+                <div class="card mb-16">
+                    <div class="card-header">
+                        <span class="card-title">Initiate New Production Lot</span>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Lot Number</label>
+                            <input @bind="_newLotNumber" placeholder="e.g. LOT-402A" />
+                        </div>
+                        <div class="form-group">
+                            <label>Recipe / Process Flow</label>
+                            <input @bind="_newRecipeName" placeholder="e.g. CMOS_Gate_Oxide" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Wafer Count (Auto-generates IDs, max 25)</label>
+                        <input type="number" @bind="_newWaferCount" min="1" max="25" />
+                    </div>
+
+                    @if (_createError != null)
+                    {
+                        <div class="error-text mb-16">@_createError</div>
+                    }
+
+                    <button class="btn" @onclick="CreateLot" disabled="@_submitting">
+                        @if (_submitting) { <span>Creating...</span> } else { <span>Start Lot</span> }
+                    </button>
+                </div>
+            }
+
+            <!-- ACTIVE LOTS TABLE -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Lots in Process</span>
+                </div>
+                @if (_lots.Count == 0)
+                {
+                    <div class="empty-state">No active lots in progress</div>
+                }
+                else
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Lot ID</th>
+                                <th>Recipe</th>
+                                <th>Active Step</th>
+                                <th>Status</th>
+                                <th>Wafers</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var lot in _lots)
+                            {
+                                <tr class="@(lot.Id == _selectedLotId ? "selected-row" : "")" style="cursor: pointer;" @onclick="() => SelectLot(lot.Id)">
+                                    <td><strong>@lot.LotNumber</strong></td>
+                                    <td>@lot.RecipeName</td>
+                                    <td><span class="badge badge-info">@lot.ActiveRouteStepName</span></td>
+                                    <td>
+                                        @if (lot.Status == "Hold")
+                                        { <span class="badge badge-danger">HOLD</span> }
+                                        else if (lot.Status == "Completed")
+                                        { <span class="badge badge-success">COMPLETE</span> }
+                                        else
+                                        { <span class="badge badge-muted">ACTIVE</span> }
+                                    </td>
+                                    <td>@lot.WaferCount</td>
+                                    <td>
+                                        <div class="flex-gap">
+                                            @if (lot.Status == "Active")
+                                            {
+                                                <select class="select-sm" @onchange="(e) => MoveLot(lot.Id, e)">
+                                                    <option value="">Move step...</option>
+                                                    @foreach (var step in _steps.Where(s => s.Id != lot.ActiveRouteStepId))
+                                                    {
+                                                        <option value="@step.Id">Route to: @step.StepName</option>
+                                                    }
+                                                </select>
+                                                @if (AuthState.IsAdmin || AuthState.IsEngineer)
+                                                {
+                                                    <button class="btn btn-danger btn-xs" @onclick:stopPropagation="true" @onclick="() => PromptHold(lot.Id)">Hold</button>
+                                                }
+                                            }
+                                            else if (lot.Status == "Hold" && (AuthState.IsAdmin || AuthState.IsEngineer))
+                                            {
+                                                <button class="btn btn-success btn-xs" @onclick:stopPropagation="true" @onclick="() => ReleaseLot(lot.Id)">Release</button>
+                                            }
+                                            else
+                                            {
+                                                <span>—</span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        <!-- LOT GENEALOGY & TIMELINE DETAILS -->
+        <div class="flex-column">
+            @if (_selectedLotDetail != null)
+            {
+                <!-- HOLD REASON PROMPT -->
+                @if (_showHoldPrompt && _holdLotId == _selectedLotDetail.Id)
+                {
+                    <div class="card mb-16 border-danger">
+                        <div class="card-header bg-danger-light">
+                            <span class="card-title text-danger">Quarantine Alert: Hold Reason Required</span>
+                        </div>
+                        <div class="form-group mt-16">
+                            <label>Engineering Rationale</label>
+                            <input @bind="_holdReason" placeholder="e.g. SPC 3-sigma violation on photolithography step" />
+                        </div>
+                        <div class="flex-gap mt-16">
+                            <button class="btn btn-danger" @onclick="SubmitHold">Apply Hold</button>
+                            <button class="btn btn-secondary" @onclick="CancelHold">Cancel</button>
+                        </div>
+                    </div>
+                }
+
+                <!-- GENEALOGY CARD -->
+                <div class="card mb-16">
+                    <div class="card-header">
+                        <span class="card-title">Lot: @_selectedLotDetail.LotNumber Genealogy</span>
+                    </div>
+                    <div class="mb-16">
+                        <strong>Recipe:</strong> @_selectedLotDetail.RecipeName <br />
+                        <strong>Status:</strong>
+                        @if (_selectedLotDetail.Status == "Hold")
+                        { <span class="badge badge-danger">ENGINEERING HOLD</span> }
+                        else if (_selectedLotDetail.Status == "Completed")
+                        { <span class="badge badge-success">COMPLETED</span> }
+                        else
+                        { <span class="badge badge-muted">IN PROCESS</span> }
+                    </div>
+
+                    <h3 class="section-title text-sm mb-16">Wafer Cassette Map (Slot Positions 1-25)</h3>
+                    <div class="wafer-grid">
+                        @foreach (var wafer in _selectedLotDetail.Wafers.OrderBy(w => w.SlotPosition))
+                        {
+                            <div class="wafer-cell wafer-@wafer.Status.ToLower()">
+                                <div class="wafer-slot">Slot @wafer.SlotPosition</div>
+                                <div class="wafer-id">@wafer.WaferId</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- ELECTRONIC WORK INSTRUCTIONS (EWI) CHECKLIST -->
+                @if (_instructions != null && _instructions.Count > 0)
+                {
+                    <div class="card mb-16">
+                        <div class="card-header">
+                            <span class="card-title">Electronic Work Instructions (EWI) Checklist</span>
+                        </div>
+                        <p class="text-xs text-muted mb-12">Mandatory items must be checked off by the operator before the lot can be routed to the next step.</p>
+                        <div class="flex-column gap-12">
+                            @foreach (var instr in _instructions)
+                            {
+                                <div class="flex-align mb-8">
+                                    <input type="checkbox" id="instr-@instr.Id" class="mr-8" 
+                                           checked="@IsInstructionChecked(instr.Id)" 
+                                           @onchange="(e) => ToggleInstruction(instr.Id, (bool)e.Value!)" />
+                                    <label for="instr-@instr.Id" class="text-sm">
+                                        @instr.TaskDescription
+                                        @if (instr.IsMandatory)
+                                        {
+                                            <span class="text-danger font-semibold ml-4">*Mandatory</span>
+                                        }
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- ROUTE HISTORY LOG -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Process Route Log (Audit Trail)</span>
+                    </div>
+                    <div class="timeline mt-16">
+                        @foreach (var log in _selectedLotDetail.MovementLogs)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-badge badge-info"></div>
+                                <div class="timeline-panel">
+                                    <div class="timeline-heading">
+                                        <strong>@log.StepName</strong>
+                                    </div>
+                                    <div class="timeline-body text-sm">
+                                        Entered: @log.EnteredAt.ToString("g") <br />
+                                        @if (log.ExitedAt.HasValue)
+                                        {
+                                            <span>Exited: @log.ExitedAt.Value.ToString("g")</span> <br />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success font-semibold">Active at this step</span> <br />
+                                        }
+                                        <span class="text-muted">Operator: ID @log.OperatorId</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card bg-gray-50 flex-center text-center p-32">
+                    <div class="text-muted">
+                        <p>Select a lot from the list to view its wafer cassette map and route step genealogy timeline.</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .wafer-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+    }
+    .wafer-cell {
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #e5e7eb;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .wafer-cell:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .wafer-good {
+        border-left: 4px solid #10b981;
+    }
+    .wafer-defect {
+        border-left: 4px solid #f59e0b;
+        background: #fef3c7;
+    }
+    .wafer-scrapped {
+        border-left: 4px solid #ef4444;
+        background: #fee2e2;
+    }
+    .wafer-slot {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+    .wafer-id {
+        font-weight: bold;
+        font-size: 12px;
+    }
+    .selected-row {
+        background-color: #f0fdf4 !important;
+        font-weight: 500;
+    }
+    .flex-gap {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .select-sm {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+    }
+    .btn-xs {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    .border-danger {
+        border: 1px solid #fecaca;
+    }
+    .bg-danger-light {
+        background-color: #fef2f2;
+    }
+    .section-title {
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
+        font-weight: 600;
+    }
+    /* Timeline styling */
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+        border-left: 2px solid #e5e7eb;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 24px;
+    }
+    .timeline-badge {
+        position: absolute;
+        left: -27px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        border: 2px solid #fff;
+    }
+    .timeline-panel {
+        background: #f9fafb;
+        border: 1px solid #f3f4f6;
+        border-radius: 6px;
+        padding: 12px;
+    }
+</style>
+
+@code {
+    private bool _loading = true;
+    private bool _submitting = false;
+    private List<LotDto> _lots = new();
+    private List<RouteStepDto> _steps = new();
+    private List<WipWorkInstruction> _instructions = new();
+    private List<WipChecklistProgress> _checklistProgress = new();
+
+    // Selection
+    private int? _selectedLotId;
+    private LotDetailDto? _selectedLotDetail;
+
+    // Creation form
+    private string _newLotNumber = string.Empty;
+    private string _newRecipeName = string.Empty;
+    private int _newWaferCount = 12;
+    private string? _createError;
+
+    // Hold actions
+    private bool _showHoldPrompt = false;
+    private int? _holdLotId;
+    private string _holdReason = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _lots = await client.GetFromJsonAsync<List<LotDto>>("/api/wip/lots") ?? new();
+            _steps = await client.GetFromJsonAsync<List<RouteStepDto>>("/api/wip/steps") ?? new();
+
+            if (_selectedLotId.HasValue)
+            {
+                await LoadLotDetail(_selectedLotId.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading WIP data: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectLot(int lotId)
+    {
+        _selectedLotId = lotId;
+        await LoadLotDetail(lotId);
+    }
+
+    private async Task LoadLotDetail(int lotId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _selectedLotDetail = await client.GetFromJsonAsync<LotDetailDto>($"/api/wip/lots/{lotId}");
+            if (_selectedLotDetail?.ActiveRouteStep != null)
+            {
+                _instructions = await client.GetFromJsonAsync<List<WipWorkInstruction>>($"/api/wip/instructions/{_selectedLotDetail.ActiveRouteStep.Id}") ?? new();
+                _checklistProgress = await client.GetFromJsonAsync<List<WipChecklistProgress>>($"/api/wip/lots/{lotId}/checklist") ?? new();
+            }
+        }
+        catch
+        {
+            _selectedLotDetail = null;
+            _instructions = new();
+            _checklistProgress = new();
+        }
+    }
+
+    private async Task CreateLot()
+    {
+        if (string.IsNullOrWhiteSpace(_newLotNumber))
+        {
+            _createError = "Lot Number is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_newRecipeName))
+        {
+            _createError = "Recipe / Process Flow is required.";
+            return;
+        }
+        if (_newWaferCount < 1 || _newWaferCount > 25)
+        {
+            _createError = "Wafer count must be between 1 and 25.";
+            return;
+        }
+
+        _createError = null;
+        _submitting = true;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            
+            // Build wafer IDs list
+            var waferIds = new List<string>();
+            for (int i = 1; i <= _newWaferCount; i++)
+            {
+                waferIds.Add($"{_newLotNumber}-W{i:D2}");
+            }
+
+            var response = await client.PostAsJsonAsync($"/api/wip/lots/create?lotNumber={_newLotNumber}&recipeName={_newRecipeName}", waferIds);
+            if (response.IsSuccessStatusCode)
+            {
+                _newLotNumber = string.Empty;
+                _newRecipeName = string.Empty;
+                _newWaferCount = 12;
+                await LoadData();
+            }
+            else
+            {
+                _createError = "Failed to create lot. Lot number may already exist.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _createError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MoveLot(int lotId, ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (string.IsNullOrEmpty(val) || !int.TryParse(val, out var stepId)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/wip/lots/{lotId}/move?targetStepId={stepId}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error routing lot: {ex.Message}");
+        }
+    }
+
+    private void PromptHold(int lotId)
+    {
+        _holdLotId = lotId;
+        _holdReason = string.Empty;
+        _showHoldPrompt = true;
+    }
+
+    private void CancelHold()
+    {
+        _showHoldPrompt = false;
+        _holdLotId = null;
+        _holdReason = string.Empty;
+    }
+
+    private async Task SubmitHold()
+    {
+        if (!_holdLotId.HasValue || string.IsNullOrWhiteSpace(_holdReason)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/wip/lots/{_holdLotId.Value}/hold?reason={Uri.EscapeDataString(_holdReason)}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _showHoldPrompt = false;
+                _holdLotId = null;
+                _holdReason = string.Empty;
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error putting lot on hold: {ex.Message}");
+        }
+    }
+
+    private async Task ReleaseLot(int lotId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync($"/api/wip/lots/{lotId}/release", null);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error releasing lot: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleInstruction(int instructionId, bool completed)
+    {
+        if (!_selectedLotId.HasValue) return;
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/wip/lots/{_selectedLotId.Value}/checklist/toggle?instructionId={instructionId}&completed={completed}", null);
+            await LoadLotDetail(_selectedLotId.Value);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling checklist item: {ex.Message}");
+        }
+    }
+
+    private bool IsInstructionChecked(int instructionId)
+    {
+        return _checklistProgress.Any(p => p.WorkInstructionId == instructionId && p.IsCompleted);
+    }
+
+    private class WipWorkInstruction { public int Id { get; set; } public int RouteStepId { get; set; } public string TaskDescription { get; set; } = string.Empty; public bool IsMandatory { get; set; } }
+    private class WipChecklistProgress { public int Id { get; set; } public int LotId { get; set; } public int WorkInstructionId { get; set; } public bool IsCompleted { get; set; } }
+}

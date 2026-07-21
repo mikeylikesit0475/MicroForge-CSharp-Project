@@ -10,11 +10,13 @@ public class AgentAppService : IAgentAppService
 {
     private readonly IAgentRuntime _agentRuntime;
     private readonly IRepository<AgentLog> _logRepo;
+    private readonly ILlmClient _llmClient;
 
-    public AgentAppService(IAgentRuntime agentRuntime, IRepository<AgentLog> logRepo)
+    public AgentAppService(IAgentRuntime agentRuntime, IRepository<AgentLog> logRepo, ILlmClient llmClient)
     {
         _agentRuntime = agentRuntime;
         _logRepo = logRepo;
+        _llmClient = llmClient;
     }
 
     public async Task<AgentResponseDto> ChatAsync(AgentRequestDto request, ClaimsPrincipal user, CancellationToken ct = default)
@@ -34,7 +36,8 @@ public class AgentAppService : IAgentAppService
             UserId = userId,
             Username = username,
             Roles = roles,
-            ProductionLineIds = lineIds
+            ProductionLineIds = lineIds,
+            Model = request.Model
         };
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -91,5 +94,10 @@ public class AgentAppService : IAgentAppService
     {
         var idClaim = user.FindFirst("sub")?.Value ?? user.FindFirst("nameidentifier")?.Value ?? "0";
         return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
+    public async Task<List<string>> GetAvailableModelsAsync(CancellationToken ct = default)
+    {
+        return await _llmClient.GetAvailableModelsAsync(ct);
     }
 }

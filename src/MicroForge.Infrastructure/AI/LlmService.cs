@@ -43,30 +43,127 @@ public class LlmService : ILlmClient
             };
             foreach (var msg in request.Messages)
             {
-                messages.Add(new { role = msg.Role, content = msg.Content });
+                if (msg.Role == "assistant" && !string.IsNullOrEmpty(msg.ToolName))
+                {
+                    // Reconstruct assistant message with tool calls for history
+                    messages.Add(new
+                    {
+                        role = "assistant",
+                        content = msg.Content,
+                        tool_calls = new[]
+                        {
+                            new
+                            {
+                                id = $"call_{msg.ToolName}",
+                                type = "function",
+                                function = new
+                                {
+                                    name = msg.ToolName,
+                                    arguments = "{}"
+                                }
+                            }
+                        }
+                    });
+                }
+                else if (msg.Role == "tool" && !string.IsNullOrEmpty(msg.ToolName))
+                {
+                    // Reconstruct tool response for history
+                    messages.Add(new
+                    {
+                        role = "tool",
+                        tool_call_id = $"call_{msg.ToolName}",
+                        name = msg.ToolName,
+                        content = msg.Content
+                    });
+                }
+                else
+                {
+                    messages.Add(new { role = msg.Role, content = msg.Content });
+                }
             }
 
-            var payload = new
+            var modelToUse = !string.IsNullOrEmpty(request.ModelOverride) ? request.ModelOverride : _settings.LlmModel;
+
+            object payload;
+            if (request.AvailableTools != null && request.AvailableTools.Count > 0)
             {
-                model = _settings.LlmModel,
-                messages,
-                temperature = 0.3,
-                max_tokens = 2000
-            };
+                var toolsList = request.AvailableTools.Select(t => new
+                {
+                    type = "function",
+                    function = new
+                    {
+                        name = t.Name,
+                        description = t.Description,
+                        parameters = t.Schema
+                    }
+                }).ToList();
+
+                payload = new
+                {
+                    model = modelToUse,
+                    messages,
+                    tools = toolsList,
+                    tool_choice = "auto",
+                    temperature = 0.3,
+                    max_tokens = 2000
+                };
+            }
+            else
+            {
+                payload = new
+                {
+                    model = modelToUse,
+                    messages,
+                    temperature = 0.3,
+                    max_tokens = 2000
+                };
+            }
 
             var response = await _httpClient.PostAsJsonAsync($"{_settings.LlmEndpoint}/v1/chat/completions", payload, ct);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-            var content = result.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+            var choice = result.GetProperty("choices")[0];
+            var message = choice.GetProperty("message");
+            var content = message.TryGetProperty("content", out var contentProp) && contentProp.ValueKind != JsonValueKind.Null
+                ? contentProp.GetString() ?? ""
+                : "";
+
+            ToolCall? toolCall = null;
+            var finishReason = true;
+
+            if (message.TryGetProperty("tool_calls", out var toolCallsProp) && toolCallsProp.ValueKind == JsonValueKind.Array && toolCallsProp.GetArrayLength() > 0)
+            {
+                var firstCall = toolCallsProp[0];
+                var name = firstCall.GetProperty("function").GetProperty("name").GetString() ?? "";
+                var argsString = firstCall.GetProperty("function").GetProperty("arguments").GetString() ?? "{}";
+
+                JsonObject? arguments = null;
+                try
+                {
+                    arguments = JsonSerializer.Deserialize<JsonObject>(argsString);
+                }
+                catch
+                {
+                    arguments = new JsonObject();
+                }
+
+                toolCall = new ToolCall
+                {
+                    Name = name,
+                    Arguments = arguments
+                };
+                finishReason = false;
+            }
+
             var tokens = result.TryGetProperty("usage", out var usage) && usage.TryGetProperty("total_tokens", out var t)
                 ? t.GetInt32() : 0;
 
             return new LlmResponse
             {
                 Content = content,
-                ToolCall = null,
-                FinishReason = true,
+                ToolCall = toolCall,
+                FinishReason = finishReason,
                 TokensUsed = tokens
             };
         }
@@ -255,4 +352,46 @@ public class LlmService : ILlmClient
     }
 
     private static int EstimateTokens(string text) => (int)Math.Ceiling(text.Length / 4.0);
+
+    public async Task<List<string>> GetAvailableModelsAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(_settings.LlmProvider) || _settings.LlmProvider == "mock" ||
+            string.IsNullOrEmpty(_settings.LlmEndpoint))
+        {
+            return new List<string> { "mock-model" };
+        }
+
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_settings.LlmEndpoint}/api/tags", ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new List<string> { _settings.LlmModel };
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<OllamaTagsResponse>(cancellationToken: ct);
+            if (result?.Models != null && result.Models.Count > 0)
+            {
+                return result.Models.Select(m => m.Name).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch models from Ollama endpoint, falling back to configured model");
+        }
+
+        return new List<string> { _settings.LlmModel };
+    }
+
+    private class OllamaTagsResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("models")]
+        public List<OllamaModelItem>? Models { get; set; }
+    }
+
+    private class OllamaModelItem
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+    }
 }

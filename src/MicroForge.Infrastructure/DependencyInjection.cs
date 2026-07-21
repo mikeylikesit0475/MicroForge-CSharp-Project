@@ -84,12 +84,22 @@ public static class DependencyInjection
         services.AddScoped<ITool, QueryProductionRunsTool>();
         services.AddScoped<ITool, UpdateProductionRunStatusTool>();
         services.AddScoped<ITool, GetDashboardSummaryTool>();
+        services.AddScoped<ITool, QueryWipLotsTool>();
+        services.AddScoped<ITool, MoveWipLotTool>();
+        services.AddScoped<ITool, HoldWipLotTool>();
+        services.AddScoped<ITool, ReleaseWipLotTool>();
+        services.AddScoped<ITool, GetOeeMetricsTool>();
+        services.AddScoped<ITool, QueryFdcDiagnosticsTool>();
+        services.AddScoped<ITool, ManageCapaActionsTool>();
+        services.AddScoped<ITool, GetSecsGemLogsTool>();
+        services.AddScoped<ITool, ManageQualificationsTool>();
 
         // Background services
         if (configuration.GetSection("Sensor").Get<SensorSettings>()?.AutoStart != false)
         {
             services.AddHostedService<SensorSimulator>();
         }
+        services.AddHostedService<SecsGemSimulator>();
 
         return services;
     }

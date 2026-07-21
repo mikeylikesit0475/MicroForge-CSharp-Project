@@ -1,0 +1,299 @@
+@page "/fdc"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+@using System.Net.Http.Json
+
+<PageTitle>FDC Diagnostics — MicroForge</PageTitle>
+
+<h1 class="page-title">Fault Detection &amp; Classification (FDC)</h1>
+
+@if (_loading)
+{
+    <div class="loading">Loading FDC diagnostic metrics...</div>
+}
+else
+{
+    <!-- FDC REAL-TIME ALARMS BANNER -->
+    @if (_activeFaults.Count > 0)
+    {
+        <div class="card mb-16 border-danger bg-danger-light">
+            <div class="card-header bg-transparent">
+                <span class="card-title text-danger flex-align">
+                    <span class="pulse-red mr-8"></span> Active FDC Chamber Fault Alarms
+                </span>
+            </div>
+            <div class="mt-16">
+                <ul class="fault-list">
+                    @foreach (var fault in _activeFaults)
+                    {
+                        <li class="fault-item">
+                            <span class="badge badge-danger">ALARM</span> @fault
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-16 border-success bg-success-light">
+            <div class="card-header bg-transparent py-12">
+                <span class="card-title text-success flex-align">
+                    <span class="icon-checkmark mr-8">✓</span> All Chamber Trace Signals within Control Limits
+                </span>
+            </div>
+        </div>
+    }
+
+    <!-- TWO-COLUMN WORKSPACE -->
+    <div class="grid-2">
+        
+        <!-- CHAMBER MATCHING STABILITY DIAGNOSTICS -->
+        <div class="flex-column">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Chamber Matching &amp; Stability Analytics</span>
+                </div>
+                <p class="text-sm text-muted mb-16">
+                    Compares average values of sensor types across all chambers running the same recipe flow. Deviations greater than 15% indicate mismatched equipment.
+                </p>
+
+                @foreach (var summary in _matchingSummaries)
+                {
+                    <div class="chamber-sensor-block mb-16">
+                        <div class="flex-between mb-8">
+                            <span class="sensor-title">@summary.SensorType Sensor Baseline</span>
+                            <span class="text-sm text-muted">Group Avg: <strong>@summary.GroupAverage</strong></span>
+                        </div>
+                        <table class="table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Chamber</th>
+                                    <th>Avg Value</th>
+                                    <th>Variance</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var chamber in summary.Chambers)
+                                {
+                                    <tr class="@(chamber.IsMismatched ? "bg-warning-light" : "")">
+                                        <td>@chamber.ProductionLineName</td>
+                                        <td>@chamber.AverageValue</td>
+                                        <td>@chamber.Variance</td>
+                                        <td>
+                                            @if (chamber.IsMismatched)
+                                            {
+                                                <span class="badge badge-warning">Drift Mismatch</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-success">Matched</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- REMAINING USEFUL LIFE (RUL) CONSUMABLE GAUGES -->
+        <div class="flex-column">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Remaining Useful Life (RUL) &amp; Consumables</span>
+                </div>
+                <p class="text-sm text-muted mb-16">
+                    Estimates wear level on critical physical parts based on cumulative processing exposure. Orange highlights indicate recommended swapout windows.
+                </p>
+
+                @foreach (var tool in _maintenanceStatuses)
+                {
+                    <div class="tool-maintenance-block mb-24">
+                        <div class="flex-between mb-12 border-bottom-sm">
+                            <span class="tool-title">@tool.ProductionLineName</span>
+                            <span class="text-xs text-muted">Exposure Hours: <strong>@tool.TotalRunHours hrs</strong></span>
+                        </div>
+
+                        @foreach (var part in tool.Parts)
+                        {
+                            <div class="part-rul-row mb-12">
+                                <div class="flex-between text-sm mb-4">
+                                    <span>@part.PartName</span>
+                                    <span class="font-semibold text-@part.Status.ToLower()">
+                                        @part.RemainingLifePercentage% (@part.EstimatedHoursRemaining hrs left)
+                                    </span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill fill-@part.Status.ToLower()" style="width: @part.RemainingLifePercentage%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+}
+
+<style>
+    .flex-align {
+        display: flex;
+        align-items: center;
+    }
+    .mr-8 {
+        margin-right: 8px;
+    }
+    .py-12 {
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+    .mb-24 {
+        margin-bottom: 24px;
+    }
+    .border-success {
+        border: 1px solid #a7f3d0;
+    }
+    .bg-success-light {
+        background-color: #f0fdf4;
+    }
+    .border-danger {
+        border: 1px solid #fecaca;
+    }
+    .bg-danger-light {
+        background-color: #fef2f2;
+    }
+    .bg-warning-light {
+        background-color: #fffbeb !important;
+    }
+    .text-danger {
+        color: #ef4444;
+    }
+    .text-success {
+        color: #10b981;
+    }
+    .text-warning {
+        color: #f59e0b;
+    }
+    .text-good {
+        color: #10b981;
+    }
+    .pulse-red {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #ef4444;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        animation: pulse 1.6s infinite;
+        display: inline-block;
+    }
+    @@keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+    .icon-checkmark {
+        font-weight: bold;
+        font-size: 16px;
+    }
+    .fault-list {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .fault-item {
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: #374151;
+        line-height: 1.5;
+    }
+    .sensor-title {
+        font-weight: bold;
+        font-size: 14px;
+        color: #1f2937;
+    }
+    .tool-title {
+        font-weight: bold;
+        font-size: 14px;
+        color: #111827;
+    }
+    .border-bottom-sm {
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 4px;
+    }
+    .table-sm {
+        width: 100%;
+        font-size: 12px;
+        border-collapse: collapse;
+    }
+    .table-sm th, .table-sm td {
+        padding: 6px 8px;
+        text-align: left;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        height: 8px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.4s ease-in-out;
+    }
+    .fill-good {
+        background-color: #10b981;
+    }
+    .fill-warning {
+        background-color: #f59e0b;
+    }
+    .fill-critical {
+        background-color: #ef4444;
+    }
+</style>
+
+@code {
+    private bool _loading = true;
+    private List<ChamberMatchingSummaryDto> _matchingSummaries = new();
+    private List<ToolMaintenanceStatusDto> _maintenanceStatuses = new();
+    private List<string> _activeFaults = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _matchingSummaries = await client.GetFromJsonAsync<List<ChamberMatchingSummaryDto>>("/api/fdc/matching") ?? new();
+            _maintenanceStatuses = await client.GetFromJsonAsync<List<ToolMaintenanceStatusDto>>("/api/fdc/maintenance") ?? new();
+            _activeFaults = await client.GetFromJsonAsync<List<string>>("/api/fdc/faults") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading FDC diagnostics: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}

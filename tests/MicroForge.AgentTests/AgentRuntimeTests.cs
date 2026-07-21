@@ -417,6 +417,11 @@ public class AgentRuntimeTests
                 });
             return Task.FromResult(_responses.Dequeue());
         }
+
+        public Task<List<string>> GetAvailableModelsAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(new List<string> { "mock-model" });
+        }
     }
 }
 

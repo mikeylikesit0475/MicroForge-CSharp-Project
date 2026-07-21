@@ -393,6 +393,115 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
         content.Should().Contain("Line Beta");
     }
 
+    [Fact]
+    public async Task wip_endpoints_support_creation_movement_and_hold()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Login
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // 2. Create Lot
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/wip/lots/create?lotNumber=LOT-API-101&recipeName=FLOW-B", 
+            new List<string> { "W-1", "W-2" });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 3. Get Lots
+        var getLotsResponse = await client.GetAsync("/api/wip/lots");
+        getLotsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var lotsContent = await getLotsResponse.Content.ReadAsStringAsync();
+        lotsContent.Should().Contain("LOT-API-101");
+    }
+
+    [Fact]
+    public async Task fdc_endpoints_return_success()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Login
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // 2. Query endpoints
+        var matchingRes = await client.GetAsync("/api/fdc/matching");
+        matchingRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var maintRes = await client.GetAsync("/api/fdc/maintenance");
+        maintRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var faultsRes = await client.GetAsync("/api/fdc/faults");
+        faultsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task fab_endpoints_return_success()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Login
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // 2. Query endpoints
+        var oeeRes = await client.GetAsync("/api/fab/oee");
+        oeeRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var maintRes = await client.GetAsync("/api/fab/maintenance");
+        maintRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var corrRes = await client.GetAsync("/api/fab/correlation");
+        corrRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var diffRes = await client.GetAsync("/api/fab/diff?runId=1&sensorType=Temperature");
+        diffRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var capasRes = await client.GetAsync("/api/fab/capas");
+        capasRes.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task closed_loop_endpoints_return_success()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Login
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // 2. Query EWI & Qualifications
+        var instructionsRes = await client.GetAsync("/api/wip/instructions/1");
+        instructionsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var qualificationsRes = await client.GetAsync("/api/wip/qualifications");
+        qualificationsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private class LoginResult
     {
         public string AccessToken { get; set; } = string.Empty;
