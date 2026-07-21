@@ -70,6 +70,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Qcm9kdWN0aW9uUnVucy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/Components/Pages/SupplyChain.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9TdXBwbHlDaGFpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/mikeylikesit0475/Desktop/MicroForge-CSharp-Project/src/MicroForge.Web/Components/Pages/Wip.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XaXAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

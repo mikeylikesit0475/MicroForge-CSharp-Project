@@ -502,6 +502,192 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
         qualificationsRes.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task scm_endpoints_return_seeded_data()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // Suppliers
+        var suppliersRes = await client.GetAsync("/api/scm/suppliers");
+        suppliersRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var suppliersContent = await suppliersRes.Content.ReadAsStringAsync();
+        suppliersContent.Should().Contain("Silicon Wafers Inc.");
+
+        // Materials
+        var materialsRes = await client.GetAsync("/api/scm/materials");
+        materialsRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var materialsContent = await materialsRes.Content.ReadAsStringAsync();
+        materialsContent.Should().Contain("WAF-300-001");
+
+        // MRP
+        var mrpRes = await client.GetAsync("/api/scm/mrp");
+        mrpRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var mrpContent = await mrpRes.Content.ReadAsStringAsync();
+        mrpContent.Should().Contain("needsReorder");
+
+        // Purchase Orders (empty initially)
+        var poRes = await client.GetAsync("/api/scm/purchase-orders");
+        poRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Reservations (empty initially)
+        var resRes = await client.GetAsync("/api/scm/reservations");
+        resRes.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task scm_purchase_order_full_lifecycle()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // Get suppliers and materials
+        var suppliersRes = await client.GetAsync("/api/scm/suppliers");
+        var suppliers = await suppliersRes.Content.ReadFromJsonAsync<List<ScmSupplierDto>>();
+        var supplierId = suppliers!.First().Id;
+
+        var materialsRes = await client.GetAsync("/api/scm/materials");
+        var materials = await materialsRes.Content.ReadFromJsonAsync<List<ScmMaterialDto>>();
+        var materialId = materials!.First().Id;
+        var originalQty = materials.First().QuantityOnHand;
+
+        // Create PO
+        var createRes = await client.PostAsJsonAsync(
+            $"/api/scm/purchase-orders/create?supplierId={supplierId}",
+            new List<ScmPoLineDto> { new() { MaterialId = materialId, Quantity = 15, UnitCost = 50.0m } });
+        createRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var po = await createRes.Content.ReadFromJsonAsync<ScmPurchaseOrderDto>();
+        po!.Status.Should().Be("Draft");
+
+        // Approve PO
+        var approveRes = await client.PostAsync($"/api/scm/purchase-orders/{po.Id}/approve", null);
+        approveRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Receive PO
+        var receiveRes = await client.PostAsync($"/api/scm/purchase-orders/{po.Id}/receive", null);
+        receiveRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify inventory updated
+        var updatedMaterialsRes = await client.GetAsync("/api/scm/materials");
+        var updatedMaterials = await updatedMaterialsRes.Content.ReadFromJsonAsync<List<ScmMaterialDto>>();
+        var updatedMat = updatedMaterials!.First(m => m.Id == materialId);
+        updatedMat.QuantityOnHand.Should().Be(originalQty + 15);
+    }
+
+    [Fact]
+    public async Task analytics_dashboard_charts_returns_chart_data()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/analytics/dashboard-charts");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("sensorGauges");
+        content.Should().Contain("yieldTrends");
+        content.Should().Contain("defectDistribution");
+    }
+
+    [Fact]
+    public async Task analytics_yield_trends_returns_trends()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/analytics/yield-trends");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task analytics_predict_yield_returns_prediction()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/analytics/predict-yield/1");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("confidence");
+    }
+
+    [Fact]
+    public async Task analytics_predict_yield_nonexistent_line_returns_404()
+    {
+        var client = _factory.CreateClient();
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "admin123"
+        });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResult>();
+        var token = loginResult!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/analytics/predict-yield/999");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task analytics_endpoints_require_authentication()
+    {
+        var client = _factory.CreateClient();
+
+        var chartsResponse = await client.GetAsync("/api/analytics/dashboard-charts");
+        chartsResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var trendsResponse = await client.GetAsync("/api/analytics/yield-trends");
+        trendsResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var predictResponse = await client.GetAsync("/api/analytics/predict-yield/1");
+        predictResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private class ScmSupplierDto { public int Id { get; set; } public string Name { get; set; } = string.Empty; }
+    private class ScmMaterialDto { public int Id { get; set; } public decimal QuantityOnHand { get; set; } }
+    private class ScmPoLineDto { public int MaterialId { get; set; } public decimal Quantity { get; set; } public decimal UnitCost { get; set; } }
+    private class ScmPurchaseOrderDto { public int Id { get; set; } public string Status { get; set; } = string.Empty; }
+
     private class LoginResult
     {
         public string AccessToken { get; set; } = string.Empty;

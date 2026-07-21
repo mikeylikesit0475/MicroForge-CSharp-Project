@@ -35,6 +35,158 @@ else if (_summary != null)
         </div>
     </div>
 
+    @if (_chartData != null)
+    {
+        <!-- ── Yield Trend Charts ── -->
+        @if (_chartData.YieldTrends.Count > 0)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Yield Trends with Predictions</span>
+                </div>
+                <div class="chart-container">
+                    @foreach (var trend in _chartData.YieldTrends)
+                    {
+                        <div class="yield-chart-section">
+                            <div class="chart-subtitle">
+                                @trend.LineName (@trend.LineType)
+                                @if (trend.Prediction.PredictedYield.HasValue)
+                                {
+                                    <span class="badge @GetConfidenceBadge(trend.Prediction.Confidence)">
+                                        Predicted: @trend.Prediction.PredictedYield.Value.ToString("F1")% (@trend.Prediction.Confidence)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-muted">Insufficient data</span>
+                                }
+                            </div>
+                            @if (trend.HistoricalRuns.Count > 0)
+                            {
+                                <div class="bar-chart">
+                                    @{
+                                        var maxVal = Math.Max(
+                                            (double)trend.HistoricalRuns.Max(r => r.ActualYield),
+                                            (double)(trend.Prediction.PredictedYield ?? 0));
+                                        if (maxVal < 100) maxVal = 100;
+                                    }
+                                    <div class="bar-chart-row">
+                                        @foreach (var run in trend.HistoricalRuns)
+                                        {
+                                            var heightPct = (double)run.ActualYield / maxVal * 100;
+                                            <div class="bar-wrapper" title="@run.BatchNumber: @run.ActualYield.ToString("F1")%">
+                                                <div class="bar bar-historical" style="height: @(heightPct)%">
+                                                    <span class="bar-label">@run.ActualYield.ToString("F0")</span>
+                                                </div>
+                                                <span class="bar-x-label">@run.BatchNumber.Substring(Math.Max(0, run.BatchNumber.Length - 3))</span>
+                                            </div>
+                                        }
+                                        @if (trend.Prediction.PredictedYield.HasValue)
+                                        {
+                                            var predHeight = (double)trend.Prediction.PredictedYield.Value / maxVal * 100;
+                                            <div class="bar-wrapper" title="Predicted: @trend.Prediction.PredictedYield.Value.ToString("F1")%">
+                                                <div class="bar bar-predicted" style="height: @(predHeight)%">
+                                                    <span class="bar-label">@trend.Prediction.PredictedYield.Value.ToString("F0")</span>
+                                                </div>
+                                                <span class="bar-x-label">PRED</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="chart-legend">
+                                    <span class="legend-item"><span class="legend-dot legend-historical"></span> Historical Yield</span>
+                                    <span class="legend-item"><span class="legend-dot legend-predicted"></span> Predicted (R²=@trend.Prediction.RSquared.ToString("F2"))</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state">No completed runs yet</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- ── Sensor Gauges & Defect Distribution ── -->
+        <div class="grid-2">
+            @if (_chartData.SensorGauges.Count > 0)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Sensor Gauges</span>
+                    </div>
+                    <div class="gauge-grid">
+                        @foreach (var gauge in _chartData.SensorGauges)
+                        {
+                            var pct = GetGaugePercentage(gauge);
+                            <div class="gauge-card @GetGaugeStatusClass(gauge.Status)">
+                                <div class="gauge-header">
+                                    <span class="gauge-line">@gauge.ProductionLineName</span>
+                                    <span class="badge @GetGaugeBadge(gauge.Status)">@gauge.Status</span>
+                                </div>
+                                <div class="gauge-body">
+                                    <div class="gauge-name">@gauge.SensorType</div>
+                                    <div class="gauge-value">@gauge.CurrentValue.ToString("F1") <span class="gauge-unit">@gauge.Unit</span></div>
+                                    <div class="gauge-bar-container">
+                                        <div class="gauge-bar" style="width: @(pct)%"></div>
+                                    </div>
+                                    <div class="gauge-limits">
+                                        @if (gauge.Lcl.HasValue && gauge.Ucl.HasValue)
+                                        {
+                                            <span>LCL: @gauge.Lcl.Value.ToString("F1")</span>
+                                            <span>Mean: @gauge.Mean?.ToString("F1")</span>
+                                            <span>UCL: @gauge.Ucl.Value.ToString("F1")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No control limits yet</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (_chartData.DefectDistribution.Count > 0)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Defect Distribution</span>
+                    </div>
+                    @{
+                        var maxDefects = _chartData.DefectDistribution.Max(d => d.Count);
+                    }
+                    <div class="h-bar-chart">
+                        @foreach (var defect in _chartData.DefectDistribution)
+                        {
+                            var widthPct = (double)defect.Count / maxDefects * 100;
+                            <div class="h-bar-row">
+                                <span class="h-bar-label">@defect.DefectType</span>
+                                <div class="h-bar-track">
+                                    <div class="h-bar-fill @GetDefectSeverityClass(defect.Severity)" style="width: @(widthPct)%">
+                                        <span class="h-bar-count">@defect.Count</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Defect Distribution</span>
+                    </div>
+                    <div class="empty-state">No defects recorded yet</div>
+                </div>
+            }
+        </div>
+    }
+
     <div class="grid-2">
         <div class="card">
             <div class="card-header">
@@ -145,6 +297,7 @@ else
 
 @code {
     private DashboardSummaryDto? _summary;
+    private DashboardChartDataDto? _chartData;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -159,6 +312,7 @@ else
         {
             var client = AuthState.GetClient();
             _summary = await client.GetFromJsonAsync<DashboardSummaryDto>("/api/dashboard");
+            _chartData = await client.GetFromJsonAsync<DashboardChartDataDto>("/api/analytics/dashboard-charts");
         }
         catch
         {
@@ -176,5 +330,49 @@ else
         "High" => "badge-danger",
         "Medium" => "badge-warning",
         _ => "badge-info"
+    };
+
+    private string GetConfidenceBadge(string confidence) => confidence switch
+    {
+        "high" => "badge-success",
+        "medium" => "badge-warning",
+        _ => "badge-muted"
+    };
+
+    private double GetGaugePercentage(SensorGaugeDto gauge)
+    {
+        if (gauge.Ucl.HasValue && gauge.Lcl.HasValue && gauge.Ucl.Value != gauge.Lcl.Value)
+        {
+            var range = (double)(gauge.Ucl.Value - gauge.Lcl.Value);
+            var val = (double)(gauge.CurrentValue - gauge.Lcl.Value);
+            return Math.Max(0, Math.Min(100, val / range * 100));
+        }
+        return 50;
+    }
+
+    private string GetGaugeStatusClass(string status) => status switch
+    {
+        "Anomaly" => "gauge-danger",
+        "SPC Violation" => "gauge-warning",
+        "Above UCL" => "gauge-warning",
+        "Below LCL" => "gauge-warning",
+        _ => "gauge-normal"
+    };
+
+    private string GetGaugeBadge(string status) => status switch
+    {
+        "Anomaly" => "badge-danger",
+        "SPC Violation" => "badge-warning",
+        "Above UCL" => "badge-warning",
+        "Below LCL" => "badge-warning",
+        _ => "badge-success"
+    };
+
+    private string GetDefectSeverityClass(string severity) => severity switch
+    {
+        "Critical" => "h-bar-critical",
+        "Major" => "h-bar-major",
+        "Minor" => "h-bar-minor",
+        _ => "h-bar-cosmetic"
     };
 }

@@ -429,6 +429,101 @@ namespace MicroForge.Infrastructure.Migrations
                     b.ToTable("LotMovementLogs");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Material", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ReorderPoint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ReorderQuantity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartNumber")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.MaterialReservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("LotId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("QuantityReserved")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReservedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RouteStepName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LotId");
+
+                    b.HasIndex("MaterialId");
+
+                    b.ToTable("MaterialReservations");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -556,6 +651,87 @@ namespace MicroForge.Infrastructure.Migrations
                     b.HasIndex("ProductionLineId", "StartTime");
 
                     b.ToTable("ProductionRuns");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApprovedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpectedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OrderedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PONumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PONumber")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("PurchaseOrders");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.PurchaseOrderLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PurchaseOrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("QuantityOrdered")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("QuantityReceived")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("PurchaseOrderLines");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.RecipeVersion", b =>
@@ -721,6 +897,49 @@ namespace MicroForge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ShiftLogs");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LeadTimeDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Rating")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.ToolMaintenanceLog", b =>
@@ -1013,6 +1232,32 @@ namespace MicroForge.Infrastructure.Migrations
                     b.Navigation("RouteStep");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Material", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.MaterialReservation", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Lot", "Lot")
+                        .WithMany()
+                        .HasForeignKey("LotId");
+
+                    b.HasOne("MicroForge.Domain.Entities.Material", "Material")
+                        .WithMany("Reservations")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lot");
+
+                    b.Navigation("Material");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionEvent", b =>
                 {
                     b.HasOne("MicroForge.Domain.Entities.ProductionLine", "ProductionLine")
@@ -1037,6 +1282,36 @@ namespace MicroForge.Infrastructure.Migrations
                         .HasForeignKey("ProductionLineId1");
 
                     b.Navigation("ProductionLine");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.PurchaseOrderLine", b =>
+                {
+                    b.HasOne("MicroForge.Domain.Entities.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MicroForge.Domain.Entities.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("Lines")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+
+                    b.Navigation("PurchaseOrder");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.SensorReading", b =>
@@ -1152,6 +1427,11 @@ namespace MicroForge.Infrastructure.Migrations
                     b.Navigation("Wafers");
                 });
 
+            modelBuilder.Entity("MicroForge.Domain.Entities.Material", b =>
+                {
+                    b.Navigation("Reservations");
+                });
+
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionLine", b =>
                 {
                     b.Navigation("ProductionRuns");
@@ -1164,6 +1444,11 @@ namespace MicroForge.Infrastructure.Migrations
             modelBuilder.Entity("MicroForge.Domain.Entities.ProductionRun", b =>
                 {
                     b.Navigation("DefectRecords");
+                });
+
+            modelBuilder.Entity("MicroForge.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("MicroForge.Domain.Entities.Role", b =>

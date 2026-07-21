@@ -1,0 +1,1089 @@
+@page "/supply-chain"
+@inject AuthStateProvider AuthState
+@inject NavigationManager Navigation
+@using System.Net.Http.Json
+
+<PageTitle>Supply Chain Management — MicroForge</PageTitle>
+
+<h1 class="page-title">Supply Chain &amp; Inventory Management</h1>
+
+<div class="card mb-16">
+    <div class="tabs-header">
+        <button class="tab-btn @(_activeTab == "inventory" ? "active" : "")" @onclick='() => SetTab("inventory")'>Inventory</button>
+        <button class="tab-btn @(_activeTab == "mrp" ? "active" : "")" @onclick='() => SetTab("mrp")'>MRP Planning</button>
+        <button class="tab-btn @(_activeTab == "po" ? "active" : "")" @onclick='() => SetTab("po")'>Purchase Orders</button>
+        <button class="tab-btn @(_activeTab == "suppliers" ? "active" : "")" @onclick='() => SetTab("suppliers")'>Suppliers</button>
+        <button class="tab-btn @(_activeTab == "reservations" ? "active" : "")" @onclick='() => SetTab("reservations")'>Reservations</button>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="loading">Loading supply chain data...</div>
+}
+else
+{
+    @if (_activeTab == "inventory")
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Material Inventory</span>
+                <div class="flex-gap">
+                    <label class="text-sm">
+                        <input type="checkbox" @bind="_belowReorderOnly" /> Show reorder items only
+                    </label>
+                    @if (AuthState.IsAdmin || AuthState.IsEngineer)
+                    {
+                        <button class="btn btn-secondary btn-sm" @onclick="ToggleCreateMaterial">+ Add Material</button>
+                    }
+                </div>
+            </div>
+
+            @if (_showCreateMaterial)
+            {
+                <div class="card mb-16 bg-gray-50">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Part Number</label>
+                            <input @bind="_newPartNumber" placeholder="e.g. WAF-300-001" />
+                        </div>
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input @bind="_newMaterialName" placeholder="e.g. 300mm Silicon Wafer" />
+                        </div>
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select @bind="_newMaterialCategory">
+                                <option value="RawWafer">Raw Wafer</option>
+                                <option value="Chemical">Chemical</option>
+                                <option value="Gas">Gas</option>
+                                <option value="Consumable">Consumable</option>
+                                <option value="SparePart">Spare Part</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input @bind="_newMaterialUnit" placeholder="ea, L, kg" />
+                        </div>
+                        <div class="form-group">
+                            <label>Supplier</label>
+                            <select @bind="_newMaterialSupplierId">
+                                <option value="">— Select —</option>
+                                @foreach (var s in _suppliers)
+                                {
+                                    <option value="@s.Id">@s.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-4">
+                        <div class="form-group">
+                            <label>Qty On Hand</label>
+                            <input type="number" @bind="_newQtyOnHand" />
+                        </div>
+                        <div class="form-group">
+                            <label>Reorder Point</label>
+                            <input type="number" @bind="_newReorderPoint" />
+                        </div>
+                        <div class="form-group">
+                            <label>Reorder Qty</label>
+                            <input type="number" @bind="_newReorderQty" />
+                        </div>
+                        <div class="form-group">
+                            <label>Unit Cost ($)</label>
+                            <input type="number" @bind="_newUnitCost" />
+                        </div>
+                    </div>
+                    <div class="flex-gap">
+                        <button class="btn" @onclick="CreateMaterial">Create</button>
+                        <button class="btn btn-secondary" @onclick="ToggleCreateMaterial">Cancel</button>
+                    </div>
+                </div>
+            }
+
+            @if (_materials.Count == 0)
+            {
+                <div class="empty-state">No materials found</div>
+            }
+            else
+            {
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>On Hand</th>
+                            <th>Reorder Pt</th>
+                            <th>Unit Cost</th>
+                            <th>Supplier</th>
+                            <th>Reservations</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in _materials)
+                        {
+                            <tr class="@(m.Status == "Reorder" ? "bg-warning-light" : "")">
+                                <td><code>@m.PartNumber</code></td>
+                                <td>@m.Name</td>
+                                <td><span class="badge badge-info">@m.Category</span></td>
+                                <td><strong>@m.QuantityOnHand</strong> @m.Unit</td>
+                                <td>@m.ReorderPoint @m.Unit</td>
+                                <td>$@m.UnitCost</td>
+                                <td>@m.SupplierName</td>
+                                <td>@m.ActiveReservations</td>
+                                <td>
+                                    @if (m.Status == "Reorder")
+                                    {
+                                        <span class="badge badge-warning">REORDER</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-success">OK</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (AuthState.IsAdmin || AuthState.IsEngineer)
+                                    {
+                                        <button class="btn btn-secondary btn-xs" @onclick="() => QuickAdjust(m.Id, 10)">+10</button>
+                                        <button class="btn btn-secondary btn-xs" @onclick="() => QuickAdjust(m.Id, -10)">-10</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else if (_activeTab == "mrp")
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Material Requirements Planning (MRP)</span>
+                <button class="btn btn-secondary btn-sm" @onclick="LoadMrp">Refresh</button>
+            </div>
+            <p class="text-sm text-muted mb-16">
+                Calculates net available stock (on-hand minus active reservations) and identifies materials requiring reorder based on supplier lead times.
+            </p>
+
+            @if (_mrpRecs.Count == 0)
+            {
+                <div class="empty-state">No MRP data available</div>
+            }
+            else
+            {
+                <div class="mb-16">
+                    <span class="badge badge-danger mr-8">@_mrpRecs.Count(r => r.NeedsReorder) materials need reorder</span>
+                    <span class="badge badge-success">@_mrpRecs.Count(r => !r.NeedsReorder) materials OK</span>
+                </div>
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Material</th>
+                            <th>On Hand</th>
+                            <th>Reserved</th>
+                            <th>Available</th>
+                            <th>Reorder Pt</th>
+                            <th>Suggested Order</th>
+                            <th>Lead Time</th>
+                            <th>Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _mrpRecs)
+                        {
+                            <tr class="@(r.NeedsReorder ? "bg-warning-light" : "")">
+                                <td><code>@r.PartNumber</code></td>
+                                <td>@r.MaterialName</td>
+                                <td>@r.QuantityOnHand</td>
+                                <td>@r.ReservedQuantity</td>
+                                <td><strong>@r.AvailableQuantity</strong></td>
+                                <td>@r.ReorderPoint</td>
+                                <td>@(r.NeedsReorder ? r.SuggestedOrderQuantity.ToString() : "—")</td>
+                                <td>@r.LeadTimeDays days</td>
+                                <td class="text-xs">@r.Recommendation</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else if (_activeTab == "po")
+    {
+        <div class="grid-2">
+            <!-- PO LIST -->
+            <div class="flex-column">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Purchase Orders</span>
+                        @if (AuthState.IsAdmin || AuthState.IsEngineer)
+                        {
+                            <button class="btn btn-secondary btn-sm" @onclick="ToggleCreatePo">+ New PO</button>
+                        }
+                    </div>
+
+                    @if (_showCreatePo)
+                    {
+                        <div class="card mb-16 bg-gray-50">
+                            <div class="form-group">
+                                <label>Supplier</label>
+                                <select @bind="_newPoSupplierId">
+                                    <option value="">— Select Supplier —</option>
+                                    @foreach (var s in _suppliers)
+                                    {
+                                        <option value="@s.Id">@s.Name (Lead: @s.LeadTimeDays days)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Material</label>
+                                <select @bind="_newPoMaterialId">
+                                    <option value="">— Select Material —</option>
+                                    @foreach (var m in _materials)
+                                    {
+                                        <option value="@m.Id">@m.PartNumber — @m.Name ($@m.UnitCost/@m.Unit)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Quantity</label>
+                                    <input type="number" @bind="_newPoQuantity" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Unit Cost ($)</label>
+                                    <input type="number" @bind="_newPoUnitCost" />
+                                </div>
+                            </div>
+                            <div class="flex-gap">
+                                <button class="btn" @onclick="AddPoLine">Add Line</button>
+                                <button class="btn btn-success" @onclick="CreatePo" disabled="@(_poLines.Count == 0 || string.IsNullOrEmpty(_newPoSupplierId))">Submit PO</button>
+                                <button class="btn btn-secondary" @onclick="ToggleCreatePo">Cancel</button>
+                            </div>
+
+                            @if (_poLines.Count > 0)
+                            {
+                                <h4 class="section-title text-sm mt-16 mb-8">PO Lines</h4>
+                                <ul class="text-sm">
+                                    @for (int i = 0; i < _poLines.Count; i++)
+                                    {
+                                        <li>@_poLines[i].materialName — Qty: @_poLines[i].quantity @@ @_poLines[i].unitCost = $@(_poLines[i].quantity * _poLines[i].unitCost) <button class="btn btn-danger btn-xs" @onclick="() => RemovePoLine(i)">Remove</button></li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+
+                    @if (_purchaseOrders.Count == 0)
+                    {
+                        <div class="empty-state">No purchase orders found</div>
+                    }
+                    else
+                    {
+                        <table class="table-sm">
+                            <thead>
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Supplier</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                    <th>Expected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var po in _purchaseOrders)
+                                {
+                                    <tr>
+                                        <td><strong>@po.PONumber</strong></td>
+                                        <td>@po.SupplierName</td>
+                                        <td>
+                                            @if (po.Status == "Received")
+                                            {
+                                                <span class="badge badge-success">@po.Status</span>
+                                            }
+                                            else if (po.Status == "Approved")
+                                            {
+                                                <span class="badge badge-info">@po.Status</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning">@po.Status</span>
+                                            }
+                                        </td>
+                                        <td>$@po.TotalAmount</td>
+                                        <td>@(po.ExpectedAt?.ToString("d") ?? "—")</td>
+                                        <td>
+                                            <div class="flex-gap">
+                                                @if (po.Status == "Draft" && (AuthState.IsAdmin || AuthState.IsEngineer))
+                                                {
+                                                    <button class="btn btn-success btn-xs" @onclick="() => ApprovePo(po.Id)">Approve</button>
+                                                }
+                                                @if (po.Status == "Approved" && (AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator))
+                                                {
+                                                    <button class="btn btn-xs" @onclick="() => ReceivePo(po.Id)">Receive</button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <!-- PO DETAIL -->
+            <div class="flex-column">
+                @if (_selectedPo != null)
+                {
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">@_selectedPo.PONumber Details</span>
+                        </div>
+                        <div class="mb-16">
+                            <strong>Supplier:</strong> @_selectedPo.SupplierName <br />
+                            <strong>Status:</strong> @_selectedPo.Status <br />
+                            <strong>Total:</strong> $@_selectedPo.TotalAmount <br />
+                            <strong>Created By:</strong> @_selectedPo.CreatedBy <br />
+                            <strong>Ordered:</strong> @_selectedPo.OrderedAt.ToString("g") <br />
+                            <strong>Expected:</strong> @( _selectedPo.ExpectedAt.HasValue ? _selectedPo.ExpectedAt.Value.ToString("g") : "N/A")
+                        </div>
+                        <h4 class="section-title text-sm mb-8">Line Items</h4>
+                        <table class="table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Part Number</th>
+                                    <th>Material</th>
+                                    <th>Qty Ordered</th>
+                                    <th>Qty Received</th>
+                                    <th>Unit Cost</th>
+                                    <th>Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in _selectedPo.Lines)
+                                {
+                                    <tr>
+                                        <td><code>@line.PartNumber</code></td>
+                                        <td>@line.MaterialName</td>
+                                        <td>@line.QuantityOrdered</td>
+                                        <td>@line.QuantityReceived</td>
+                                        <td>$@line.UnitCost</td>
+                                        <td>$@line.LineTotal</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="card bg-gray-50 flex-center text-center p-32">
+                        <div class="text-muted">
+                            <p>Select a purchase order to view line item details.</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (_activeTab == "suppliers")
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Suppliers</span>
+                @if (AuthState.IsAdmin || AuthState.IsEngineer)
+                {
+                    <button class="btn btn-secondary btn-sm" @onclick="ToggleCreateSupplier">+ Add Supplier</button>
+                }
+            </div>
+
+            @if (_showCreateSupplier)
+            {
+                <div class="card mb-16 bg-gray-50">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input @bind="_newSupplierName" placeholder="e.g. Silicon Wafers Inc." />
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input @bind="_newSupplierEmail" placeholder="sales@supplier.com" />
+                        </div>
+                    </div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input @bind="_newSupplierPhone" placeholder="+1-555-0100" />
+                        </div>
+                        <div class="form-group">
+                            <label>Lead Time (days)</label>
+                            <input type="number" @bind="_newSupplierLeadTime" />
+                        </div>
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <select @bind="_newSupplierRating">
+                                <option value="A">A (Preferred)</option>
+                                <option value="B">B (Approved)</option>
+                                <option value="C">C (Conditional)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-gap">
+                        <button class="btn" @onclick="CreateSupplier">Create</button>
+                        <button class="btn btn-secondary" @onclick="ToggleCreateSupplier">Cancel</button>
+                    </div>
+                </div>
+            }
+
+            @if (_suppliers.Count == 0)
+            {
+                <div class="empty-state">No suppliers found</div>
+            }
+            else
+            {
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Phone</th>
+                            <th>Lead Time</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in _suppliers)
+                        {
+                            <tr>
+                                <td><strong>@s.Name</strong></td>
+                                <td>@s.ContactEmail</td>
+                                <td>@s.ContactPhone</td>
+                                <td>@s.LeadTimeDays days</td>
+                                <td>
+                                    <span class="badge @(s.Rating == "A" ? "badge-success" : s.Rating == "B" ? "badge-warning" : "badge-danger")">@s.Rating</span>
+                                </td>
+                                <td>
+                                    @if (s.IsActive)
+                                    {
+                                        <span class="badge badge-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-muted">Inactive</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    else if (_activeTab == "reservations")
+    {
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Material Reservations</span>
+                @if (AuthState.IsAdmin || AuthState.IsEngineer || AuthState.IsOperator)
+                {
+                    <button class="btn btn-secondary btn-sm" @onclick="ToggleCreateReservation">+ Reserve Material</button>
+                }
+            </div>
+
+            @if (_showCreateReservation)
+            {
+                <div class="card mb-16 bg-gray-50">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Material</label>
+                            <select @bind="_newResMaterialId">
+                                <option value="">— Select Material —</option>
+                                @foreach (var m in _materials)
+                                {
+                                    <option value="@m.Id">@m.PartNumber — @m.Name (On Hand: @m.QuantityOnHand)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lot ID (optional)</label>
+                            <input type="number" @bind="_newResLotId" placeholder="e.g. 1" />
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" @bind="_newResQuantity" />
+                        </div>
+                        <div class="form-group">
+                            <label>Route Step Name</label>
+                            <input @bind="_newResRouteStep" placeholder="e.g. LITHO" />
+                        </div>
+                    </div>
+                    <div class="flex-gap">
+                        <button class="btn" @onclick="CreateReservation">Reserve</button>
+                        <button class="btn btn-secondary" @onclick="ToggleCreateReservation">Cancel</button>
+                    </div>
+                </div>
+            }
+
+            @if (_reservations.Count == 0)
+            {
+                <div class="empty-state">No material reservations found</div>
+            }
+            else
+            {
+                <table class="table-sm">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Lot</th>
+                            <th>Quantity</th>
+                            <th>Route Step</th>
+                            <th>Status</th>
+                            <th>Reserved At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _reservations)
+                        {
+                            <tr>
+                                <td>@r.MaterialName</td>
+                                <td>@(r.LotNumber != "N/A" ? r.LotNumber : "—")</td>
+                                <td><strong>@r.QuantityReserved</strong></td>
+                                <td>@r.RouteStepName</td>
+                                <td>
+                                    @if (r.Status == "Reserved")
+                                    {
+                                        <span class="badge badge-info">@r.Status</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-muted">@r.Status</span>
+                                    }
+                                </td>
+                                <td>@r.ReservedAt.ToString("g")</td>
+                                <td>
+                                    @if (r.Status == "Reserved" && (AuthState.IsAdmin || AuthState.IsEngineer))
+                                    {
+                                        <button class="btn btn-danger btn-xs" @onclick="() => ReleaseReservation(r.Id)">Release</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+}
+
+<style>
+    .tabs-header {
+        display: flex;
+        border-bottom: 2px solid #e5e7eb;
+        gap: 16px;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 16px;
+        font-weight: 500;
+        cursor: pointer;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+        transition: color 0.2s, border-bottom 0.2s;
+    }
+    .tab-btn.active {
+        color: #10b981;
+        border-bottom: 2px solid #10b981;
+    }
+    .tab-btn:hover {
+        color: #10b981;
+    }
+    .table-sm {
+        width: 100%;
+        font-size: 12px;
+        border-collapse: collapse;
+    }
+    .table-sm th, .table-sm td {
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .btn-xs {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    .flex-gap {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+    .bg-warning-light {
+        background-color: #fffbeb !important;
+    }
+    .bg-gray-50 {
+        background-color: #f9fafb;
+    }
+    .section-title {
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
+        font-weight: 600;
+    }
+    .mr-8 {
+        margin-right: 8px;
+    }
+    .mb-16 {
+        margin-bottom: 16px;
+    }
+    .mt-16 {
+        margin-top: 16px;
+    }
+    .p-32 {
+        padding: 32px;
+    }
+    .flex-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .flex-column {
+        display: flex;
+        flex-direction: column;
+    }
+</style>
+
+@code {
+    private bool _loading = true;
+    private string _activeTab = "inventory";
+
+    // Data
+    private List<MaterialDto> _materials = new();
+    private List<SupplierDto> _suppliers = new();
+    private List<PurchaseOrderDto> _purchaseOrders = new();
+    private List<MrpRecommendationDto> _mrpRecs = new();
+    private List<MaterialReservationDto> _reservations = new();
+    private PurchaseOrderDto? _selectedPo;
+
+    // Filters
+    private bool _belowReorderOnly;
+
+    // Create material form
+    private bool _showCreateMaterial;
+    private string _newPartNumber = string.Empty;
+    private string _newMaterialName = string.Empty;
+    private string _newMaterialCategory = "RawWafer";
+    private string _newMaterialUnit = "ea";
+    private string? _newMaterialSupplierId;
+    private decimal _newQtyOnHand;
+    private decimal _newReorderPoint;
+    private decimal _newReorderQty;
+    private decimal _newUnitCost;
+
+    // Create supplier form
+    private bool _showCreateSupplier;
+    private string _newSupplierName = string.Empty;
+    private string _newSupplierEmail = string.Empty;
+    private string _newSupplierPhone = string.Empty;
+    private int _newSupplierLeadTime = 7;
+    private string _newSupplierRating = "A";
+
+    // Create PO form
+    private bool _showCreatePo;
+    private string? _newPoSupplierId;
+    private string? _newPoMaterialId;
+    private decimal _newPoQuantity;
+    private decimal _newPoUnitCost;
+    private List<(string materialId, string materialName, decimal quantity, decimal unitCost)> _poLines = new();
+
+    // Create reservation form
+    private bool _showCreateReservation;
+    private string? _newResMaterialId;
+    private int? _newResLotId;
+    private decimal _newResQuantity;
+    private string _newResRouteStep = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _suppliers = await client.GetFromJsonAsync<List<SupplierDto>>("/api/scm/suppliers") ?? new();
+            _materials = await client.GetFromJsonAsync<List<MaterialDto>>("/api/scm/materials") ?? new();
+            _purchaseOrders = await client.GetFromJsonAsync<List<PurchaseOrderDto>>("/api/scm/purchase-orders") ?? new();
+            _reservations = await client.GetFromJsonAsync<List<MaterialReservationDto>>("/api/scm/reservations") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading SCM data: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        StateHasChanged();
+    }
+
+    private async Task RefreshInventory()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            var url = $"/api/scm/materials?belowReorderOnly={_belowReorderOnly}";
+            _materials = await client.GetFromJsonAsync<List<MaterialDto>>(url) ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing inventory: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadMrp()
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            _mrpRecs = await client.GetFromJsonAsync<List<MrpRecommendationDto>>("/api/scm/mrp") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading MRP: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleCreateMaterial()
+    {
+        _showCreateMaterial = !_showCreateMaterial;
+    }
+
+    private async Task CreateMaterial()
+    {
+        if (string.IsNullOrWhiteSpace(_newPartNumber) || string.IsNullOrWhiteSpace(_newMaterialName)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            int? supplierId = int.TryParse(_newMaterialSupplierId, out var sid) ? sid : (int?)null;
+            var url = $"/api/scm/materials/create?partNumber={Uri.EscapeDataString(_newPartNumber)}&name={Uri.EscapeDataString(_newMaterialName)}&category={_newMaterialCategory}&unit={Uri.EscapeDataString(_newMaterialUnit)}&qtyOnHand={_newQtyOnHand}&reorderPoint={_newReorderPoint}&reorderQty={_newReorderQty}&unitCost={_newUnitCost}";
+            if (supplierId.HasValue) url += $"&supplierId={supplierId.Value}";
+
+            var response = await client.PostAsync(url, null);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreateMaterial = false;
+                _newPartNumber = string.Empty;
+                _newMaterialName = string.Empty;
+                await RefreshInventory();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating material: {ex.Message}");
+        }
+    }
+
+    private async Task QuickAdjust(int materialId, decimal delta)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/scm/materials/{materialId}/adjust?delta={delta}", null);
+            await RefreshInventory();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adjusting inventory: {ex.Message}");
+        }
+    }
+
+    private void ToggleCreateSupplier()
+    {
+        _showCreateSupplier = !_showCreateSupplier;
+    }
+
+    private async Task CreateSupplier()
+    {
+        if (string.IsNullOrWhiteSpace(_newSupplierName)) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var url = $"/api/scm/suppliers/create?name={Uri.EscapeDataString(_newSupplierName)}&email={Uri.EscapeDataString(_newSupplierEmail)}&phone={Uri.EscapeDataString(_newSupplierPhone)}&leadTimeDays={_newSupplierLeadTime}&rating={_newSupplierRating}";
+            var response = await client.PostAsync(url, null);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreateSupplier = false;
+                _newSupplierName = string.Empty;
+                _newSupplierEmail = string.Empty;
+                _newSupplierPhone = string.Empty;
+                var client2 = AuthState.GetClient();
+                _suppliers = await client2.GetFromJsonAsync<List<SupplierDto>>("/api/scm/suppliers") ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating supplier: {ex.Message}");
+        }
+    }
+
+    private void ToggleCreatePo()
+    {
+        _showCreatePo = !_showCreatePo;
+        _poLines = new();
+    }
+
+    private void AddPoLine()
+    {
+        if (string.IsNullOrEmpty(_newPoMaterialId) || _newPoQuantity <= 0) return;
+
+        var material = _materials.FirstOrDefault(m => m.Id.ToString() == _newPoMaterialId);
+        if (material == null) return;
+
+        _poLines.Add((material.Id.ToString(), $"{material.PartNumber} — {material.Name}", _newPoQuantity, _newPoUnitCost > 0 ? _newPoUnitCost : material.UnitCost));
+        _newPoMaterialId = null;
+        _newPoQuantity = 0;
+        _newPoUnitCost = 0;
+        StateHasChanged();
+    }
+
+    private void RemovePoLine(int index)
+    {
+        if (index >= 0 && index < _poLines.Count)
+        {
+            _poLines.RemoveAt(index);
+        }
+    }
+
+    private async Task CreatePo()
+    {
+        if (string.IsNullOrEmpty(_newPoSupplierId) || _poLines.Count == 0) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var linePayload = _poLines.Select(l => new
+            {
+                materialId = int.Parse(l.materialId),
+                quantity = l.quantity,
+                unitCost = l.unitCost
+            }).ToList();
+
+            var response = await client.PostAsJsonAsync($"/api/scm/purchase-orders/create?supplierId={_newPoSupplierId}", linePayload);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreatePo = false;
+                _poLines = new();
+                _newPoSupplierId = null;
+                _purchaseOrders = await client.GetFromJsonAsync<List<PurchaseOrderDto>>("/api/scm/purchase-orders") ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating PO: {ex.Message}");
+        }
+    }
+
+    private async Task ApprovePo(int poId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/scm/purchase-orders/{poId}/approve", null);
+            _purchaseOrders = await client.GetFromJsonAsync<List<PurchaseOrderDto>>("/api/scm/purchase-orders") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error approving PO: {ex.Message}");
+        }
+    }
+
+    private async Task ReceivePo(int poId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/scm/purchase-orders/{poId}/receive", null);
+            _purchaseOrders = await client.GetFromJsonAsync<List<PurchaseOrderDto>>("/api/scm/purchase-orders") ?? new();
+            await RefreshInventory();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error receiving PO: {ex.Message}");
+        }
+    }
+
+    private void ToggleCreateReservation()
+    {
+        _showCreateReservation = !_showCreateReservation;
+    }
+
+    private async Task CreateReservation()
+    {
+        if (string.IsNullOrEmpty(_newResMaterialId) || _newResQuantity <= 0) return;
+
+        try
+        {
+            var client = AuthState.GetClient();
+            var url = $"/api/scm/reservations/create?materialId={_newResMaterialId}&quantity={_newResQuantity}&routeStepName={Uri.EscapeDataString(_newResRouteStep)}";
+            if (_newResLotId.HasValue) url += $"&lotId={_newResLotId.Value}";
+
+            var response = await client.PostAsync(url, null);
+            if (response.IsSuccessStatusCode)
+            {
+                _showCreateReservation = false;
+                _newResMaterialId = null;
+                _newResQuantity = 0;
+                _newResRouteStep = string.Empty;
+                _newResLotId = null;
+                _reservations = await client.GetFromJsonAsync<List<MaterialReservationDto>>("/api/scm/reservations") ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating reservation: {ex.Message}");
+        }
+    }
+
+    private async Task ReleaseReservation(int reservationId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/scm/reservations/{reservationId}/release", null);
+            _reservations = await client.GetFromJsonAsync<List<MaterialReservationDto>>("/api/scm/reservations") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error releasing reservation: {ex.Message}");
+        }
+    }
+
+    // DTOs for deserialization
+    private class SupplierDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string ContactEmail { get; set; } = string.Empty;
+        public string ContactPhone { get; set; } = string.Empty;
+        public int LeadTimeDays { get; set; }
+        public string Rating { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+
+    private class MaterialDto
+    {
+        public int Id { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public decimal QuantityOnHand { get; set; }
+        public decimal ReorderPoint { get; set; }
+        public decimal ReorderQuantity { get; set; }
+        public decimal UnitCost { get; set; }
+        public int? SupplierId { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public int ActiveReservations { get; set; }
+    }
+
+    private class PurchaseOrderDto
+    {
+        public int Id { get; set; }
+        public string PONumber { get; set; } = string.Empty;
+        public int SupplierId { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public string ApprovedBy { get; set; } = string.Empty;
+        public DateTime OrderedAt { get; set; }
+        public DateTime? ExpectedAt { get; set; }
+        public DateTime? ReceivedAt { get; set; }
+        public List<PurchaseOrderLineDto> Lines { get; set; } = new();
+    }
+
+    private class PurchaseOrderLineDto
+    {
+        public int Id { get; set; }
+        public int MaterialId { get; set; }
+        public string MaterialName { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
+        public decimal QuantityOrdered { get; set; }
+        public decimal QuantityReceived { get; set; }
+        public decimal UnitCost { get; set; }
+        public decimal LineTotal { get; set; }
+    }
+
+    private class MrpRecommendationDto
+    {
+        public int MaterialId { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public string MaterialName { get; set; } = string.Empty;
+        public decimal QuantityOnHand { get; set; }
+        public decimal ReservedQuantity { get; set; }
+        public decimal AvailableQuantity { get; set; }
+        public decimal ReorderPoint { get; set; }
+        public bool NeedsReorder { get; set; }
+        public decimal SuggestedOrderQuantity { get; set; }
+        public int LeadTimeDays { get; set; }
+        public string Recommendation { get; set; } = string.Empty;
+    }
+
+    private class MaterialReservationDto
+    {
+        public int Id { get; set; }
+        public int MaterialId { get; set; }
+        public string MaterialName { get; set; } = string.Empty;
+        public int? LotId { get; set; }
+        public string LotNumber { get; set; } = string.Empty;
+        public decimal QuantityReserved { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string RouteStepName { get; set; } = string.Empty;
+        public DateTime ReservedAt { get; set; }
+    }
+}

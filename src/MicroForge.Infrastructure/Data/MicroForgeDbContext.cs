@@ -33,6 +33,13 @@ public class MicroForgeDbContext : DbContext
     public DbSet<WorkInstruction> WorkInstructions => Set<WorkInstruction>();
     public DbSet<LotChecklistProgress> LotChecklistProgresses => Set<LotChecklistProgress>();
 
+    // SCM
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<Material> Materials => Set<Material>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<MaterialReservation> MaterialReservations => Set<MaterialReservation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(e =>
@@ -193,6 +200,52 @@ public class MicroForgeDbContext : DbContext
             e.HasIndex(p => new { p.LotId, p.WorkInstructionId }).IsUnique();
             e.HasOne(p => p.Lot).WithMany().HasForeignKey(p => p.LotId);
             e.HasOne(p => p.WorkInstruction).WithMany().HasForeignKey(p => p.WorkInstructionId);
+        });
+
+        // SCM entities
+        modelBuilder.Entity<Supplier>(e =>
+        {
+            e.HasIndex(s => s.Name).IsUnique();
+            e.Property(s => s.Name).IsRequired().HasMaxLength(200);
+            e.Property(s => s.ContactEmail).HasMaxLength(200);
+            e.Property(s => s.ContactPhone).HasMaxLength(50);
+            e.Property(s => s.Rating).HasMaxLength(5);
+        });
+
+        modelBuilder.Entity<Material>(e =>
+        {
+            e.HasIndex(m => m.PartNumber).IsUnique();
+            e.Property(m => m.PartNumber).IsRequired().HasMaxLength(100);
+            e.Property(m => m.Name).IsRequired().HasMaxLength(200);
+            e.Property(m => m.Unit).IsRequired().HasMaxLength(20);
+            e.HasOne(m => m.Supplier).WithMany().HasForeignKey(m => m.SupplierId);
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(e =>
+        {
+            e.HasIndex(po => po.PONumber).IsUnique();
+            e.Property(po => po.PONumber).IsRequired().HasMaxLength(50);
+            e.Property(po => po.Status).IsRequired().HasMaxLength(30);
+            e.Property(po => po.CreatedBy).HasMaxLength(100);
+            e.Property(po => po.ApprovedBy).HasMaxLength(100);
+            e.HasOne(po => po.Supplier).WithMany().HasForeignKey(po => po.SupplierId);
+        });
+
+        modelBuilder.Entity<PurchaseOrderLine>(e =>
+        {
+            e.HasIndex(l => l.PurchaseOrderId);
+            e.HasOne(l => l.PurchaseOrder).WithMany(po => po.Lines).HasForeignKey(l => l.PurchaseOrderId);
+            e.HasOne(l => l.Material).WithMany().HasForeignKey(l => l.MaterialId);
+        });
+
+        modelBuilder.Entity<MaterialReservation>(e =>
+        {
+            e.HasIndex(r => r.MaterialId);
+            e.HasIndex(r => r.LotId);
+            e.HasOne(r => r.Material).WithMany(m => m.Reservations).HasForeignKey(r => r.MaterialId);
+            e.HasOne(r => r.Lot).WithMany().HasForeignKey(r => r.LotId);
+            e.Property(r => r.Status).IsRequired().HasMaxLength(30);
+            e.Property(r => r.RouteStepName).HasMaxLength(50);
         });
     }
 }

@@ -93,6 +93,11 @@ public static class DependencyInjection
         services.AddScoped<ITool, ManageCapaActionsTool>();
         services.AddScoped<ITool, GetSecsGemLogsTool>();
         services.AddScoped<ITool, ManageQualificationsTool>();
+        services.AddScoped<ITool, QueryInventoryTool>();
+        services.AddScoped<ITool, ManagePurchaseOrdersTool>();
+        services.AddScoped<ITool, GetMrpRecommendationsTool>();
+        services.AddScoped<ITool, PredictYieldTool>();
+        services.AddScoped<ITool, GetYieldTrendWithPredictionTool>();
 
         // Background services
         if (configuration.GetSection("Sensor").Get<SensorSettings>()?.AutoStart != false)
