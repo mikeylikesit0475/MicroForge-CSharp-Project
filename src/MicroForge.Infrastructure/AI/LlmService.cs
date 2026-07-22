@@ -244,7 +244,8 @@ public class LlmService : ILlmClient
         // Dashboard / overview / summary queries
         if (lower.Contains("dashboard") || lower.Contains("overview") || lower.Contains("summary") ||
             lower.Contains("kpi") || lower.Contains("how are things") || lower.Contains("what's happening") ||
-            lower.Contains("whats happening") || lower.Contains("how's it going") || lower.Contains("hows it going"))
+            lower.Contains("whats happening") || lower.Contains("how's it going") || lower.Contains("hows it going") ||
+            lower.Contains("floor"))
         {
             candidate = "get_dashboard_summary";
             args = new JsonObject();
@@ -265,7 +266,8 @@ public class LlmService : ILlmClient
             }
         }
         // Anomaly detection
-        else if (lower.Contains("anomal") || lower.Contains("detect") || lower.Contains("outlier"))
+        else if (lower.Contains("anomal") || lower.Contains("detect") || lower.Contains("outlier") ||
+                 lower.Contains("spc"))
         {
             candidate = "detect_anomalies";
             args = new JsonObject();
@@ -283,12 +285,11 @@ public class LlmService : ILlmClient
             candidate = "query_sensor_readings";
             args = new JsonObject { ["limit"] = 20 };
         }
-        // Production line status
-        else if (lower.Contains("status") || lower.Contains("line") || lower.Contains("floor") ||
-                 lower.Contains("production line") || lower.Contains("lines"))
+        // Predictive analytics — yield prediction
+        else if (lower.Contains("predict") || lower.Contains("forecast"))
         {
-            candidate = "get_production_line_status";
-            args = new JsonObject();
+            candidate = "predict_yield";
+            args = new JsonObject { ["productionLineId"] = 1 };
         }
         // Yield trends
         else if (lower.Contains("yield") || lower.Contains("trend") || lower.Contains("chart"))
@@ -296,13 +297,74 @@ public class LlmService : ILlmClient
             candidate = "get_yield_trend";
             args = new JsonObject();
         }
+        // OEE metrics
+        else if (lower.Contains("oee") || lower.Contains("equipment effectiveness") || lower.Contains("availability") || lower.Contains("performance"))
+        {
+            candidate = "get_oee_metrics";
+            args = new JsonObject();
+        }
+        // FDC diagnostics
+        else if (lower.Contains("fdc") || lower.Contains("fault detection") || lower.Contains("chamber match") || lower.Contains("rul") || lower.Contains("remaining useful life"))
+        {
+            candidate = "query_fdc_diagnostics";
+            args = new JsonObject();
+        }
+        // CAPA
+        else if (lower.Contains("capa"))
+        {
+            candidate = "manage_capa_actions";
+            args = new JsonObject { ["action"] = "list" };
+        }
+        // SECS/GEM
+        else if (lower.Contains("secs") || lower.Contains("gem") || lower.Contains("hsms") || lower.Contains("secs/gem"))
+        {
+            candidate = "get_secs_gem_logs";
+            args = new JsonObject();
+        }
+        // WIP lots
+        else if (lower.Contains("wip") || lower.Contains("lot") || lower.Contains("wafer lot") || lower.Contains("quarantine") || lower.Contains("hold lot") || lower.Contains("release lot"))
+        {
+            candidate = "query_wip_lots";
+            args = new JsonObject();
+        }
+        // Qualifications
+        else if (lower.Contains("qualif") || lower.Contains("recipe"))
+        {
+            candidate = "manage_qualifications";
+            args = new JsonObject { ["action"] = "list" };
+        }
+        // Inventory / supply chain
+        else if (lower.Contains("inventory") || lower.Contains("material") || lower.Contains("stock") || lower.Contains("reorder") || lower.Contains("supply chain") || lower.Contains("shortage"))
+        {
+            candidate = "query_inventory";
+            args = new JsonObject();
+        }
+        // Purchase orders
+        else if (lower.Contains("purchase order") || lower.Contains(" po ") || lower.Contains(" po") || lower == "po" || lower.Contains("po status"))
+        {
+            candidate = "manage_purchase_orders";
+            args = new JsonObject { ["action"] = "list" };
+        }
+        // MRP recommendations
+        else if (lower.Contains("mrp") || lower.Contains("material requirements") || lower.Contains("reorder recommendation"))
+        {
+            candidate = "get_mrp_recommendations";
+            args = new JsonObject();
+        }
         // Document search
         else if (lower.Contains("document") || lower.Contains("search") || lower.Contains("sop") ||
                  lower.Contains("spec") || lower.Contains("manual") || lower.Contains("procedure") ||
-                 lower.Contains("report") || lower.Contains("instruction"))
+                 lower.Contains("report") || lower.Contains("instruction") || lower.Contains("protocol") ||
+                 lower.Contains("safety"))
         {
             candidate = "search_documents";
             args = new JsonObject { ["query"] = message, ["topK"] = 5 };
+        }
+        // Production line status
+        else if (lower.Contains("status") || lower.Contains("line") || lower.Contains("production line") || lower.Contains("lines"))
+        {
+            candidate = "get_production_line_status";
+            args = new JsonObject();
         }
         // Production run summary
         else if (lower.Contains("run") || lower.Contains("batch") || lower.Contains("production run"))

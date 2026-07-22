@@ -263,7 +263,12 @@ public class AgentRuntime : IAgentRuntime
         var sb = new StringBuilder();
         sb.AppendLine("You are the MicroForge AI Agent, an intelligent assistant for a manufacturing intelligence platform.");
         sb.AppendLine("You have access to tools that let you query production data, sensor readings, defects, documents, and more.");
-        sb.AppendLine("Always use tools to gather data before answering questions about specific production metrics.");
+        sb.AppendLine("Use tools to gather data before answering questions about specific production metrics.");
+        sb.AppendLine("IMPORTANT: Be efficient with tool calls. Call ONE tool at a time. After receiving a tool result,");
+        sb.AppendLine("evaluate whether you have enough information to answer the user's question. If yes, respond with");
+        sb.AppendLine("a clear, concise answer WITHOUT calling another tool. Do NOT call more than 2-3 tools per question");
+        sb.AppendLine("unless absolutely necessary. If a tool returns empty results (count: 0), summarize that and");
+        sb.AppendLine("answer the user — do NOT keep trying other tools hoping to find data.");
         sb.AppendLine("When you have enough information, provide a clear, concise answer.");
         sb.AppendLine();
         sb.AppendLine($"User: {request.Username}");

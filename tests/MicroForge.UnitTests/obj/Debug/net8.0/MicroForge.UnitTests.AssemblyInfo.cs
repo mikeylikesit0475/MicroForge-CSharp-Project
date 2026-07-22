@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MicroForge.UnitTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb2b9fb3b33a056e3419c3b88ce74415b4754ed9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fbe74fcd244f2b5299e4c8f61bd0f90233f74f52")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicroForge.UnitTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MicroForge.UnitTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
