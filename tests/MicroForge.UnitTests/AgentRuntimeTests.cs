@@ -193,7 +193,8 @@ public class AgentRuntimeTests
         var result = await runtime.ExecuteAsync(createrequest());
 
         result.IsSuccess.Should().BeTrue();
-        result.Response.Should().Contain("maximum number of tool iterations");
+        result.Response.Should().Contain("Here's what I found");
+        result.Response.Should().Contain("mock tool output");
     }
 
     [Fact]

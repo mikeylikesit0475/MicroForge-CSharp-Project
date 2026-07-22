@@ -55,11 +55,18 @@ public class AgentRuntime : IAgentRuntime
 
         for (var iteration = 0; iteration < _settings.MaxIterations; iteration++)
         {
+            var isLastIteration = iteration == _settings.MaxIterations - 1;
+
             var llmRequest = new LlmRequest
             {
-                SystemPrompt = systemPrompt,
+                SystemPrompt = isLastIteration
+                    ? systemPrompt + "\n\nIMPORTANT: You have reached the final iteration. " +
+                      "Do NOT call any more tools. Synthesize a clear, helpful answer using " +
+                      "the data you have already gathered from previous tool calls."
+                    : systemPrompt,
                 Messages = conversationMessages.ToList(),
-                AvailableTools = toolDefs,
+                // On the last iteration, withhold tools so the LLM is forced to answer
+                AvailableTools = isLastIteration ? new List<ToolDefinition>() : toolDefs,
                 ModelOverride = request.Model
             };
 
@@ -72,6 +79,24 @@ public class AgentRuntime : IAgentRuntime
                 return new AgentResponse
                 {
                     Response = llmResponse.Content,
+                    ToolsInvoked = toolsInvoked,
+                    Messages = conversationMessages,
+                    TokensUsed = totalTokens,
+                    DurationMs = (decimal)sw.Elapsed.TotalMilliseconds,
+                    IsSuccess = true
+                };
+            }
+
+            // If this is the last iteration and the LLM STILL tried to call a tool
+            // (shouldn't happen since we withheld tools, but guard against mock/edge cases),
+            // synthesize a response from the gathered tool results.
+            if (isLastIteration)
+            {
+                sw.Stop();
+                var synthesized = SynthesizeFromToolResults(conversationMessages, request.Message);
+                return new AgentResponse
+                {
+                    Response = synthesized,
                     ToolsInvoked = toolsInvoked,
                     Messages = conversationMessages,
                     TokensUsed = totalTokens,
@@ -176,13 +201,61 @@ public class AgentRuntime : IAgentRuntime
         sw.Stop();
         return new AgentResponse
         {
-            Response = "I reached the maximum number of tool iterations. Please try rephrasing your question.",
+            Response = SynthesizeFromToolResults(conversationMessages, request.Message),
             ToolsInvoked = toolsInvoked,
             Messages = conversationMessages,
             TokensUsed = totalTokens,
             DurationMs = (decimal)sw.Elapsed.TotalMilliseconds,
             IsSuccess = true
         };
+    }
+
+    /// <summary>
+    /// Synthesizes a helpful response from tool results gathered during the conversation.
+    /// Used as a fallback when the LLM exhausts all iterations without producing a final answer.
+    /// </summary>
+    private static string SynthesizeFromToolResults(List<AgentMessage> messages, string originalQuestion)
+    {
+        var toolResults = messages
+            .Where(m => m.Role == "tool" && !string.IsNullOrEmpty(m.Content))
+            .ToList();
+
+        if (toolResults.Count == 0)
+        {
+            return "I wasn't able to gather enough information to answer your question. " +
+                   "Please try rephrasing or asking something more specific, such as:\n" +
+                   "- \"What's the dashboard summary?\"\n" +
+                   "- \"Show me recent sensor readings\"\n" +
+                   "- \"Are there any active alerts?\"\n" +
+                   "- \"What's the yield trend?\"";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Here's what I found based on the data I gathered:");
+        sb.AppendLine();
+
+        for (var i = 0; i < toolResults.Count; i++)
+        {
+            var result = toolResults[i];
+            var toolName = result.ToolName ?? "tool";
+            var content = result.Content!;
+
+            // Truncate very long tool outputs for readability
+            if (content.Length > 800)
+                content = content[..797] + "...";
+
+            sb.AppendLine($"**{toolName}:**");
+            sb.AppendLine(content);
+            if (i < toolResults.Count - 1)
+                sb.AppendLine();
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine("*I reached the maximum number of tool lookups, so this is a summary of the raw data. " +
+                      "For a more detailed analysis, try asking a more specific question.*");
+
+        return sb.ToString();
     }
 
     private string BuildSystemPrompt(AgentRequest request)
