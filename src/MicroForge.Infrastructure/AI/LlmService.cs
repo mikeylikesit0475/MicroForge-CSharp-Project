@@ -182,14 +182,57 @@ public class LlmService : ILlmClient
         if (toolMessages.Count > 0)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Based on the data I retrieved:");
+
+            // Try to produce a natural-language summary from the tool data
             foreach (var tm in toolMessages)
             {
-                sb.AppendLine($"- {tm.Content}");
+                var content = tm.Content ?? "";
+                var toolName = tm.ToolName ?? "";
+
+                if (content.Contains("\"count\""))
+                {
+                    // JSON tool result — extract key fields for a readable summary
+                    try
+                    {
+                        var json = JsonNode.Parse(content);
+                        var count = json?["count"]?.GetValue<int>() ?? 0;
+
+                        if (toolName == "get_dashboard_summary")
+                        {
+                            var totalLines = json?["totalLines"]?.GetValue<int>() ?? 0;
+                            var activeLines = json?["activeLines"]?.GetValue<int>() ?? 0;
+                            var activeRuns = json?["activeRuns"]?.GetValue<int>() ?? 0;
+                            var openAlerts = json?["openAlerts"]?.GetValue<int>() ?? 0;
+                            sb.AppendLine($"Currently, there are {activeLines} active production lines on the floor with {activeRuns} runs in progress and {openAlerts} open alerts.");
+                        }
+                        else if (count == 0)
+                        {
+                            sb.AppendLine($"No {toolName.Replace("query_", "").Replace("get_", "")} records found.");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"Found {count} result(s) from {toolName}:");
+                            if (json?["results"] is JsonArray results)
+                            {
+                                foreach (var item in results.Take(5))
+                                {
+                                    sb.AppendLine($"  - {item?.ToJsonString()}");
+                                }
+                                if (results.Count > 5)
+                                    sb.AppendLine($"  ... and {results.Count - 5} more.");
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        sb.AppendLine(content);
+                    }
+                }
+                else
+                {
+                    sb.AppendLine(content);
+                }
             }
-            sb.AppendLine();
-            sb.AppendLine("This information was gathered using the available tools. " +
-                          "For more detailed analysis, please check the production dashboard.");
 
             return new LlmResponse
             {

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MicroForge.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fbe74fcd244f2b5299e4c8f61bd0f90233f74f52")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+90077bfd22aa27bdeadaf94bf1dd79b470a37c5e")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicroForge.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MicroForge.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

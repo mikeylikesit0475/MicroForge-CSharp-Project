@@ -271,6 +271,12 @@ public class AgentRuntime : IAgentRuntime
         sb.AppendLine("answer the user — do NOT keep trying other tools hoping to find data.");
         sb.AppendLine("When you have enough information, provide a clear, concise answer.");
         sb.AppendLine();
+        sb.AppendLine("ANSWER STYLE: Provide complete, self-contained answers. Do NOT end your response with");
+        sb.AppendLine("follow-up questions like \"Would you like more details?\" or \"Shall I look into that?\".");
+        sb.AppendLine("Instead, proactively include the most relevant details in your answer. For example, if you");
+        sb.AppendLine("report open alerts, briefly summarize what they are rather than asking if the user wants to");
+        sb.AppendLine("know more. The user can always ask a follow-up question themselves if they want more detail.");
+        sb.AppendLine();
         sb.AppendLine($"User: {request.Username}");
         sb.AppendLine($"Roles: {string.Join(", ", request.Roles)}");
         if (request.ProductionLineIds.Count > 0)
