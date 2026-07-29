@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/MicroForge.Web.props" />
-</Project>

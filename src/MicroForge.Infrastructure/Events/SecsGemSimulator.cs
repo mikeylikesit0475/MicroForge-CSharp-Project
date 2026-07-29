@@ -185,6 +185,31 @@ public class SecsGemSimulator : BackgroundService
         });
     }
 
+    public static void SendRemoteCommand(string commandName, string recipeName = "DRAM-16Gb-v3")
+    {
+        var timestampHex = DateTime.UtcNow.ToString("HH mm ss");
+        if (commandName.Equals("REMOTE_START", StringComparison.OrdinalIgnoreCase))
+        {
+            LogTraffic("IN", "S2F21", $"00 00 00 0E 00 01 02 15 00 00 53 54 41 52 54", $"Host Command: REMOTE_START recipe={recipeName}");
+            LogTraffic("OUT", "S2F22", $"00 00 00 0A 00 01 02 16 00 00 HCACK=0", $"Equipment ACK: Command Executed Successfully.");
+        }
+        else if (commandName.Equals("PAUSE_TOOL", StringComparison.OrdinalIgnoreCase))
+        {
+            LogTraffic("IN", "S2F21", $"00 00 00 0E 00 01 02 15 00 00 50 41 55 53 45", $"Host Command: PAUSE_TOOL chamber=Chamber-A1");
+            LogTraffic("OUT", "S2F22", $"00 00 00 0A 00 01 02 16 00 00 HCACK=0", $"Equipment ACK: Chamber Paused Safely.");
+        }
+        else if (commandName.Equals("SELECT_RECIPE", StringComparison.OrdinalIgnoreCase))
+        {
+            LogTraffic("IN", "S2F21", $"00 00 00 12 00 01 02 15 00 00 52 45 43 49 50 45", $"Host Command: SELECT_RECIPE recipe={recipeName}");
+            LogTraffic("OUT", "S2F22", $"00 00 00 0A 00 01 02 16 00 00 HCACK=0", $"Equipment ACK: Recipe Loaded.");
+        }
+        else
+        {
+            LogTraffic("IN", "S1F1", $"00 00 00 0A 00 01 01 01 00 00", $"Host Query: S1F1 Are You Online?");
+            LogTraffic("OUT", "S1F2", $"00 00 00 0A 00 01 01 02 00 00", $"Equipment Reply: S1F2 Online Ack.");
+        }
+    }
+
     public override void Dispose()
     {
         _listener?.Stop();

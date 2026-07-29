@@ -191,6 +191,47 @@ else
                     <span class="flex-align"><span class="color-line bg-green mr-8"></span> Golden Run (Ideal Target)</span>
                     <span class="flex-align"><span class="color-line bg-red mr-8"></span> Process Lot Trace (Actual)</span>
                 </div>
+
+                <!-- GENAI RAG CITATION GROUNDING -->
+                <div class="mt-20 p-16 rounded border bg-light">
+                    <div class="flex-between flex-align mb-8" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 class="text-sm font-semibold text-primary margin-0">📖 GenAI Vector RAG SOP Citation Grounding</h4>
+                        <button class="btn btn-sm btn-danger font-bold flex-align" @onclick="TriggerRcaAutoRemediation" disabled="@_isRemediatingRca">
+                            @if (_isRemediatingRca)
+                            {
+                                <span>Executing Swarm Remediation...</span>
+                            }
+                            else
+                            {
+                                <span>⚡ Auto-Remediate SOP Action</span>
+                            }
+                        </button>
+                    </div>
+                    <div class="text-xs text-muted mb-4"><strong>Document:</strong> SOP-ETCH-882 (Reactive Ion Etch Safety & Fault Protocols)</div>
+                    <div class="text-xs text-danger mb-8 font-semibold">Matched Clause 4.2: High-Frequency RF Power Reflection & Chamber Pressure Runaway</div>
+                    <blockquote class="text-xs italic bg-white p-8 rounded border-left border-danger mb-8">
+                        "If RF Power reflection exceeds 15% deviation threshold (+3.0σ), inspect electrostatic chuck helium backing pressure lines and check showerhead gas valve for micro-particles."
+                    </blockquote>
+                    <div class="text-xs font-semibold text-success mb-8">
+                        <strong>Recommended Swarm Action:</strong> Quarantine lot, initiate helium line leak check, and draft an ECO for recipe RF impedance auto-matching recalibration.
+                    </div>
+
+                    @if (_lastRcaRemediation != null)
+                    {
+                        <div class="p-12 mt-12 rounded border text-xs border-success shadow-sm" style="background-color: #f0fdf4;">
+                            <div class="font-bold text-success mb-4 flex-align">
+                                <span class="pulse-green mr-8"></span> 🤖 Autonomous Swarm Remediation Executed!
+                            </div>
+                            <div class="text-muted mb-8">@_lastRcaRemediation.RemediationSummary</div>
+                            <div class="flex-gap gap-12 font-semibold" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <span class="badge badge-warning" style="background-color: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Lot Status: @_lastRcaRemediation.NewStatus</span>
+                                <span class="badge badge-primary" style="background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px;">CAPA #@_lastRcaRemediation.CapaId</span>
+                                <span class="badge badge-info" style="background-color: #06b6d4; color: white; padding: 2px 6px; border-radius: 4px;">ECO #@_lastRcaRemediation.EcoId</span>
+                                <span class="badge badge-secondary" style="background-color: #10b981; color: white; padding: 2px 6px; border-radius: 4px;">Rework: @_lastRcaRemediation.AssignedReworkStep</span>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
 
             <!-- CORRELATION SUMMARY -->
@@ -260,6 +301,10 @@ else
 
             <div class="flex-gap">
                 <button class="btn" @onclick="PingSecsHost">Send Online Ping (S1F1)</button>
+                <button class="btn btn-secondary" @onclick='() => SendSecsRemoteCommand("REMOTE_START")'>REMOTE_START (S2F21)</button>
+                <button class="btn btn-danger" @onclick='() => SendSecsRemoteCommand("PAUSE_TOOL")'>PAUSE_TOOL (S2F21)</button>
+                <button class="btn btn-secondary" @onclick='() => SendSecsRemoteCommand("SELECT_RECIPE")'>SELECT_RECIPE (S2F21)</button>
+                <button class="btn btn-success" @onclick="() => RunSelfHealingRemediation(1)">🤖 Trigger Self-Healing Swarm (Lot 1)</button>
                 <button class="btn btn-secondary" @onclick="RefreshSecsLogs">Refresh Console Logs</button>
             </div>
         </div>
@@ -622,6 +667,10 @@ else
     private string _newShiftName = string.Empty;
     private string _newShiftNotes = string.Empty;
 
+    // RCA Auto-Remediation state
+    private bool _isRemediatingRca = false;
+    private SelfHealingResultDto? _lastRcaRemediation = null;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -816,6 +865,34 @@ else
         }
     }
 
+    private async Task SendSecsRemoteCommand(string cmd)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/fab/secs/send-command?commandName={cmd}", null);
+            await RefreshSecsLogs();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending SECS command: {ex.Message}");
+        }
+    }
+
+    private async Task RunSelfHealingRemediation(int lotId)
+    {
+        try
+        {
+            var client = AuthState.GetClient();
+            await client.PostAsync($"/api/fab/self-healing/trigger?lotId={lotId}&anomaly=Thermal%20Runaway%20(%2B4.2%CF%83%20Drift)", null);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error running self-healing remediation: {ex.Message}");
+        }
+    }
+
     private async Task ToggleQualification(int lineId, string recipeName, bool qualified)
     {
         try
@@ -830,6 +907,29 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error toggling qualification: {ex.Message}");
+        }
+    }
+
+    private async Task TriggerRcaAutoRemediation()
+    {
+        _isRemediatingRca = true;
+        try
+        {
+            var client = AuthState.GetClient();
+            var response = await client.PostAsync("/api/fab/self-healing/trigger?lotId=1&anomaly=SOP-ETCH-882%20Clause%204.2%3A%20RF%20Power%20Reflection%20%2B3.0%CF%83%20Deviation", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _lastRcaRemediation = await response.Content.ReadFromJsonAsync<SelfHealingResultDto>();
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error triggering RCA auto-remediation: {ex.Message}");
+        }
+        finally
+        {
+            _isRemediatingRca = false;
         }
     }
 }

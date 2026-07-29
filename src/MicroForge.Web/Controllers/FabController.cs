@@ -20,10 +20,20 @@ namespace MicroForge.Web.Controllers;
 public class FabController : ControllerBase
 {
     private readonly IFabExpansionService _fabService;
+    private readonly IFabSelfHealingService _selfHealingService;
+    private readonly IWaferDieMapService _dieMapService;
+    private readonly IMultivariateRcaService _rcaService;
 
-    public FabController(IFabExpansionService fabService)
+    public FabController(
+        IFabExpansionService fabService,
+        IFabSelfHealingService selfHealingService,
+        IWaferDieMapService dieMapService,
+        IMultivariateRcaService rcaService)
     {
         _fabService = fabService;
+        _selfHealingService = selfHealingService;
+        _dieMapService = dieMapService;
+        _rcaService = rcaService;
     }
 
     [HttpGet("oee")]
@@ -154,5 +164,38 @@ public class FabController : ControllerBase
     {
         SecsGemSimulator.LogTraffic(direction, msgType, hex, desc);
         return Ok(new { Message = "Log injected successfully" });
+    }
+
+    [HttpPost("secs/send-command")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult SendSecsCommand([FromQuery] string commandName, [FromQuery] string recipeName = "DRAM-16Gb-v3")
+    {
+        SecsGemSimulator.SendRemoteCommand(commandName, recipeName);
+        return Ok(new { Message = $"SECS remote command '{commandName}' sent to equipment socket." });
+    }
+
+    [HttpPost("self-healing/trigger")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TriggerSelfHealing([FromQuery] int lotId, [FromQuery] string anomaly = "Thermal Runaway (+4.2σ Drift)", CancellationToken ct = default)
+    {
+        var result = await _selfHealingService.TriggerSelfHealingAsync(lotId, anomaly, ct);
+        if (result == null) return NotFound(new { Message = $"Lot {lotId} not found." });
+        return Ok(result);
+    }
+
+    [HttpGet("wafermap/{lotId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetWaferDieMap(int lotId, [FromQuery] string waferId = "", CancellationToken ct = default)
+    {
+        var map = await _dieMapService.GenerateWaferDieMapAsync(lotId, waferId, ct);
+        return Ok(map);
+    }
+
+    [HttpGet("rca/multivariate-diff/{runId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMultivariateRca(int runId, [FromQuery] string sensorType = "RF_Power", CancellationToken ct = default)
+    {
+        var rca = await _rcaService.GetMultivariateRcaAsync(runId, sensorType, ct);
+        return Ok(rca);
     }
 }

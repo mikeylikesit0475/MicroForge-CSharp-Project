@@ -280,6 +280,28 @@ public class LlmService : ILlmClient
     {
         var lower = message.ToLowerInvariant();
         var toolNames = availableTools.Select(t => t.Name).ToHashSet();
+        // Swarm Orchestration delegation routing
+        if (toolNames.Contains("delegate_to_wip_agent"))
+        {
+            if (lower.Contains("wip") || lower.Contains("lot") || lower.Contains("route") || lower.Contains("step") || lower.Contains("hold") || lower.Contains("release") || lower.Contains("qualif") || lower.Contains("recipe"))
+            {
+                return new ToolCall { Name = "delegate_to_wip_agent", Arguments = new JsonObject { ["query"] = message } };
+            }
+            if (lower.Contains("fdc") || lower.Contains("sensor") || lower.Contains("temp") || lower.Contains("pressure") || lower.Contains("vibrat") || lower.Contains("humid") || lower.Contains("rul") || lower.Contains("mismatch") || lower.Contains("consumable"))
+            {
+                return new ToolCall { Name = "delegate_to_fdc_agent", Arguments = new JsonObject { ["query"] = message } };
+            }
+            if (lower.Contains("defect") || lower.Contains("quality") || lower.Contains("yield") || lower.Contains("trend") || lower.Contains("correlation") || lower.Contains("stats") || lower.Contains("statistic"))
+            {
+                return new ToolCall { Name = "delegate_to_quality_agent", Arguments = new JsonObject { ["query"] = message } };
+            }
+            if (lower.Contains("alert") || lower.Contains("alarm") || lower.Contains("capa") || lower.Contains("eco") || lower.Contains("shift") || lower.Contains("secs") || lower.Contains("gem") || lower.Contains("hsms"))
+            {
+                return new ToolCall { Name = "delegate_to_alert_collab_agent", Arguments = new JsonObject { ["query"] = message } };
+            }
+            // Fallback default delegation if none of the keywords match
+            return new ToolCall { Name = "delegate_to_wip_agent", Arguments = new JsonObject { ["query"] = message } };
+        }
 
         string? candidate = null;
         JsonObject? args = null;

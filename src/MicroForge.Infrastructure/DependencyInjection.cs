@@ -65,7 +65,8 @@ public static class DependencyInjection
 
         // AI Agent
         services.AddScoped<IToolRegistry, ToolRegistry>();
-        services.AddScoped<IAgentRuntime, AgentRuntime>();
+        services.AddScoped<AgentRuntime>();
+        services.AddScoped<IAgentRuntime, AgentSwarmRuntime>();
         services.AddHttpClient<ILlmClient, LlmService>();
 
         // Tools — registered as scoped because they depend on DbContext
@@ -97,7 +98,13 @@ public static class DependencyInjection
         services.AddScoped<ITool, ManagePurchaseOrdersTool>();
         services.AddScoped<ITool, GetMrpRecommendationsTool>();
         services.AddScoped<ITool, PredictYieldTool>();
+        services.AddScoped<ITool, TriggerSelfHealingTool>();
+        services.AddScoped<ITool, AnalyzeRunTraceWithRagTool>();
         services.AddScoped<ITool, GetYieldTrendWithPredictionTool>();
+        services.AddScoped<ITool, GetEwiChecklistTool>();
+        services.AddScoped<ITool, CompleteEwiChecklistTool>();
+        services.AddScoped<ITool, ManageToolMaintenanceTool>();
+        services.AddScoped<ITool, CalculateSpcMetricsTool>();
 
         // Background services
         if (configuration.GetSection("Sensor").Get<SensorSettings>()?.AutoStart != false)

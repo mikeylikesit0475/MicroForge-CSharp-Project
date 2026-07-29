@@ -21,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<IFabExpansionService, FabExpansionService>();
         services.AddScoped<IScmService, ScmService>();
         services.AddScoped<IPredictiveAnalyticsService, PredictiveAnalyticsService>();
+        services.AddScoped<IFabSelfHealingService, FabSelfHealingService>();
+        services.AddScoped<IWaferDieMapService, WaferDieMapService>();
+        services.AddScoped<IMultivariateRcaService, MultivariateRcaService>();
         return services;
     }
 }
