@@ -1,29 +1,28 @@
-name: MicroForge CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
+  gate:
+    name: Build + Test
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup .NET 8 SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Restore Dependencies
-      run: dotnet restore MicroForge.sln
+      - name: Build
+        run: dotnet build MicroForge.sln --configuration Release
 
-    - name: Build Solution
-      run: dotnet build MicroForge.sln --no-restore -c Release
-
-    - name: Run Full Test Suite (Unit, Integration & Agent Evals)
-      run: dotnet test MicroForge.sln --no-build -c Release --logger "console;verbosity=normal"
+      - name: Test
+        run: dotnet test MicroForge.sln --configuration Release --no-build
